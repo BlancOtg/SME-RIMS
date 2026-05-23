@@ -37,51 +37,40 @@ const DARK = {
   sidebar: "#0d180d", sidebarText: "#8fba87", sidebarActive: "#4da65a",
 }
 
-// ── Mock data ────────────────────────────────────────────────────
-const cashFlowData = [
-  { month: "Jan", receivables: 82000,  payables: 45000, net: 37000 },
-  { month: "Feb", receivables: 91000,  payables: 52000, net: 39000 },
-  { month: "Mar", receivables: 75000,  payables: 38000, net: 37000 },
-  { month: "Apr", receivables: 110000, payables: 61000, net: 49000 },
-  { month: "May", receivables: 98000,  payables: 54000, net: 44000 },
-  { month: "Jun", receivables: 125000, payables: 68000, net: 57000 },
-]
-const agingData = [
-  { range: "0–30d",  amount: 45000, fill: "#4da65a" },
-  { range: "31–60d", amount: 28000, fill: "#e67e22" },
-  { range: "61–90d", amount: 15000, fill: "#e74c3c" },
-  { range: "90+d",   amount: 8000,  fill: "#8e44ad" },
-]
-const statusData = [
-  { name: "Paid",    value: 52, color: "#4da65a" },
-  { name: "Sent",    value: 18, color: "#3498db" },
-  { name: "Overdue", value: 14, color: "#e74c3c" },
-  { name: "Draft",   value: 10, color: "#95a5a6" },
-  { name: "Partial", value: 6,  color: "#f39c12" },
-]
-const invoices = [
-  { id: "INV-2026-001", client: "Adeyemi Enterprises", amount: 18500, status: "Overdue", due: "May 1, 2026",  days: 18 },
-  { id: "INV-2026-002", client: "Tunde & Co",          amount: 6200,  status: "Sent",    due: "May 25, 2026", days: -6 },
-  { id: "INV-2026-003", client: "Greenleaf Ltd",        amount: 32000, status: "Paid",    due: "Apr 20, 2026", days: 0  },
-  { id: "INV-2026-004", client: "Balogun Motors",       amount: 9750,  status: "Partial", due: "May 15, 2026", days: -4 },
-  { id: "INV-2026-005", client: "Lagos Textile Co",     amount: 41000, status: "Draft",   due: "—",            days: 0  },
-  { id: "INV-2026-006", client: "Nwosu Pharma",         amount: 12800, status: "Overdue", due: "Apr 28, 2026", days: 21 },
-]
-const vendors = [
-  { name: "OfficePro Supplies", contact: "supplier@officepro.ng", terms: "Net 30", balance: 12400, status: "Good"    },
-  { name: "TechCore Nigeria",   contact: "billing@techcore.ng",   terms: "Net 15", balance: 8750,  status: "Late"    },
-  { name: "Fastlink Logistics", contact: "accounts@fastlink.ng",  terms: "Net 45", balance: 3200,  status: "Good"    },
-  { name: "DataStream Inc",     contact: "ap@datastream.ng",      terms: "Net 30", balance: 21000, status: "Dispute" },
-]
-const recentDocs = [
-  { name: "Receipt_MarketRun_May18.pdf", type: "Receipt", size: "1.2 MB", date: "May 18, 2026", vendor: "Balogun Market"   },
-  { name: "INV-2026-006_Nwosu.pdf",      type: "Invoice", size: "384 KB", date: "Apr 28, 2026", vendor: "Nwosu Pharma"    },
-  { name: "Receipt_TechCore_May12.pdf",  type: "Receipt", size: "890 KB", date: "May 12, 2026", vendor: "TechCore Nigeria" },
-  { name: "INV-2026-005_Lagos.pdf",      type: "Invoice", size: "512 KB", date: "May 10, 2026", vendor: "Lagos Textile Co" },
+// ── Helpers ──────────────────────────────────────────────────────
+const fmt   = (n) => `₦${Number(n || 0).toLocaleString()}`
+const cap   = (s) => s ? s.charAt(0).toUpperCase() + s.slice(1) : ''
+const fmtDate = (d) => d ? new Date(d).toLocaleDateString('en-NG', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'
+
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+const STATUS_COLORS = {
+  paid: '#4da65a', sent: '#3498db', overdue: '#e74c3c',
+  draft: '#95a5a6', partial: '#f39c12', viewed: '#9b59b6',
+}
+const AGING_META = [
+  { range: '0–30d',  fill: '#4da65a' },
+  { range: '31–60d', fill: '#e67e22' },
+  { range: '61–90d', fill: '#e74c3c' },
+  { range: '90+d',   fill: '#8e44ad' },
 ]
 
-// ── Helpers ──────────────────────────────────────────────────────
-const fmt = (n) => `₦${n.toLocaleString()}`
+function Loader({ T }) {
+  return (
+    <div style={{ padding: 60, textAlign: 'center', color: T.textSub, fontSize: 14 }}>
+      <div style={{ fontSize: 28, marginBottom: 10 }}>⏳</div>
+      Loading…
+    </div>
+  )
+}
+
+function Empty({ message, T }) {
+  return (
+    <div style={{ padding: 60, textAlign: 'center', color: T.textSub, fontSize: 14 }}>
+      <div style={{ fontSize: 32, marginBottom: 10 }}>📭</div>
+      {message}
+    </div>
+  )
+}
 
 function Badge({ status }) {
   const map = {
@@ -106,6 +95,18 @@ function Toggle({ on, set, T }) {
   return (
     <div onClick={() => set(!on)} style={{ width: 40, height: 22, background: on ? T.accent : T.border, borderRadius: 11, position: "relative", cursor: "pointer", transition: "background 0.2s", flexShrink: 0 }}>
       <div style={{ position: "absolute", top: 3, left: on ? 21 : 3, width: 16, height: 16, background: "#fff", borderRadius: "50%", transition: "left 0.2s" }} />
+    </div>
+  )
+}
+
+// ── SIGNUP FIELD (module-scope so identity is stable across renders) ─
+function SignupField({ label, value, onChange, type = "text", placeholder, error, T }) {
+  return (
+    <div style={{ marginBottom: 14 }}>
+      <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: T.textMid, marginBottom: 5 }}>{label}</label>
+      <input value={value} onChange={onChange} type={type} placeholder={placeholder}
+        style={{ width: "100%", padding: "11px 13px", borderRadius: 10, border: `1.5px solid ${error ? "#e74c3c" : T.border}`, background: T.surface, color: T.text, fontSize: 14, outline: "none", boxSizing: "border-box" }} />
+      {error && <div style={{ fontSize: 11, color: "#e74c3c", marginTop: 4 }}>{error}</div>}
     </div>
   )
 }
@@ -268,17 +269,6 @@ function Signup({ onSignup, onLoginInstead, T }) {
   const strColor  = strColors[str] || "#e74c3c"
   const strLabel  = strLabels[str] || ""
 
-  function Field({ label, field, type = "text", placeholder }) {
-    return (
-      <div style={{ marginBottom: 14 }}>
-        <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: T.textMid, marginBottom: 5 }}>{label}</label>
-        <input value={form[field]} onChange={set(field)} type={type} placeholder={placeholder}
-          style={{ width: "100%", padding: "11px 13px", borderRadius: 10, border: `1.5px solid ${errs[field] ? "#e74c3c" : T.border}`, background: T.surface, color: T.text, fontSize: 14, outline: "none", boxSizing: "border-box" }} />
-        {errs[field] && <div style={{ fontSize: 11, color: "#e74c3c", marginTop: 4 }}>{errs[field]}</div>}
-      </div>
-    )
-  }
-
   return (
     <div style={{ minHeight: "100vh", background: T.bg, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'DM Sans','Segoe UI',sans-serif", padding: "16px" }}>
       <div style={{ position: "fixed", top: -120, left: -120, width: 400, height: 400, borderRadius: "50%", background: T.accentLight, opacity: 0.5, pointerEvents: "none" }} />
@@ -298,11 +288,11 @@ function Signup({ onSignup, onLoginInstead, T }) {
 
         <form onSubmit={handleSubmit} style={{ animation: shake ? "shake 0.4s ease" : "none" }}>
           <div style={{ display: "flex", gap: 12 }}>
-            <div style={{ flex: 1, minWidth: 0 }}><Field label="First Name" field="firstName" placeholder="Amara" /></div>
-            <div style={{ flex: 1, minWidth: 0 }}><Field label="Last Name"  field="lastName"  placeholder="Okafor" /></div>
+            <div style={{ flex: 1, minWidth: 0 }}><SignupField label="First Name" value={form.firstName} onChange={set("firstName")} placeholder="Amara"  error={errs.firstName} T={T} /></div>
+            <div style={{ flex: 1, minWidth: 0 }}><SignupField label="Last Name"  value={form.lastName}  onChange={set("lastName")}  placeholder="Okafor" error={errs.lastName}  T={T} /></div>
           </div>
 
-          <Field label="Email address" field="email" type="email" placeholder="you@yourbusiness.ng" />
+          <SignupField label="Email address" value={form.email} onChange={set("email")} type="email" placeholder="you@yourbusiness.ng" error={errs.email} T={T} />
 
           <div style={{ marginBottom: 14 }}>
             <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: T.textMid, marginBottom: 5 }}>Password</label>
@@ -321,7 +311,7 @@ function Signup({ onSignup, onLoginInstead, T }) {
             {errs.password && <div style={{ fontSize: 11, color: "#e74c3c", marginTop: 4 }}>{errs.password}</div>}
           </div>
 
-          <Field label="Confirm Password" field="confirm" type="password" placeholder="••••••••" />
+          <SignupField label="Confirm Password" value={form.confirm} onChange={set("confirm")} type="password" placeholder="••••••••" error={errs.confirm} T={T} />
 
           {serverErr && (
             <div style={{ background: T.dangerLight, border: `1px solid ${T.danger}44`, borderRadius: 8, padding: "10px 14px", marginBottom: 12, fontSize: 13, color: T.danger }}>
@@ -447,103 +437,128 @@ function StatCard({ label, value, sub, trend, color, icon, T }) {
 }
 
 // ── DASHBOARD ────────────────────────────────────────────────────
-function Dashboard({ T, isMobile, isTablet }) {
+function Dashboard({ T, isMobile, isTablet, onNavigate }) {
+  const [data, setData]       = useState(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    api.get('/dashboard')
+      .then(r => setData(r.data))
+      .catch(console.error)
+      .finally(() => setLoading(false))
+  }, [])
+
+  if (loading) return <Loader T={T} />
+
+  const kpi            = data?.kpi || {}
+  const cashFlowData   = (data?.cashFlow || []).map(d => ({ month: MONTHS[d._id.month - 1], receivables: d.receivables }))
+  const agingData      = (data?.agingBuckets || []).map((b, i) => ({ ...AGING_META[i] || { range: '90+d', fill: '#8e44ad' }, amount: b.amount }))
+  const statusData     = (data?.statusDistribution || []).map(s => ({ name: cap(s.status), value: s.count, color: STATUS_COLORS[s.status] || '#95a5a6' }))
+  const recentInvoices = data?.recentInvoices || []
+  const totalPct       = statusData.reduce((s, d) => s + d.value, 0) || 1
+
   return (
     <div>
       <div style={{ marginBottom: 24 }}>
         <h2 style={{ fontSize: "clamp(18px, 4vw, 22px)", fontWeight: 800, color: T.text, margin: 0 }}>Financial Overview</h2>
-        <p style={{ color: T.textSub, fontSize: 14, marginTop: 4 }}>May 2026 · Updated just now</p>
+        <p style={{ color: T.textSub, fontSize: 14, marginTop: 4 }}>Live data · Updated just now</p>
       </div>
 
-      {/* KPI cards */}
       <div style={{ display: "flex", gap: 12, marginBottom: 20, flexWrap: "wrap" }}>
-        <StatCard label="Total Receivables" value="₦489,200" trend={8.2}   icon="📥" color="#27ae60" T={T} />
-        <StatCard label="Total Payables"    value="₦218,350" trend={-3.1}  icon="💸" color="#e74c3c" T={T} />
-        <StatCard label="Net Cash Position" value="₦270,850" trend={14.5}  icon="💵" color="#3498db" T={T} />
-        <StatCard label="Overdue Invoices"  value="₦26,800"  sub="2 invoices" icon="⚠️" color="#e67e22" T={T} />
+        <StatCard label="Total Receivables" value={fmt(kpi.totalReceivables)}  icon="📥" color="#27ae60" T={T} />
+        <StatCard label="Total Payables"    value={fmt(kpi.totalPayables)}     icon="💸" color="#e74c3c" T={T} />
+        <StatCard label="Net Cash Position" value={fmt(kpi.netCashPosition)}   icon="💵" color="#3498db" T={T} />
+        <StatCard label="Overdue Invoices"  value={fmt(kpi.overdueTotal)} sub={kpi.overdueCount ? `${kpi.overdueCount} invoice${kpi.overdueCount > 1 ? 's' : ''}` : 'None'} icon="⚠️" color="#e67e22" T={T} />
       </div>
 
-      {/* Charts row */}
       <div style={{ display: "grid", gridTemplateColumns: isTablet ? "1fr" : "2fr 1fr", gap: 16, marginBottom: 16 }}>
         <div style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 16, padding: "20px" }}>
           <div style={{ fontWeight: 700, fontSize: 15, color: T.text, marginBottom: 16 }}>Cash Flow Trend</div>
-          <ResponsiveContainer width="100%" height={isMobile ? 180 : 220}>
-            <AreaChart data={cashFlowData}>
-              <defs>
-                <linearGradient id="grR" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%"  stopColor="#27ae60" stopOpacity={0.25} />
-                  <stop offset="95%" stopColor="#27ae60" stopOpacity={0} />
-                </linearGradient>
-                <linearGradient id="grP" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%"  stopColor="#e74c3c" stopOpacity={0.18} />
-                  <stop offset="95%" stopColor="#e74c3c" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke={T.border} />
-              <XAxis dataKey="month" tick={{ fontSize: 11, fill: T.textSub }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 10, fill: T.textSub }} axisLine={false} tickLine={false} tickFormatter={v => `₦${v / 1000}k`} width={48} />
-              <Tooltip formatter={v => fmt(v)} contentStyle={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 10, color: T.text, fontSize: 13 }} />
-              <Area type="monotone" dataKey="receivables" stroke="#27ae60" fill="url(#grR)" strokeWidth={2} name="Receivables" />
-              <Area type="monotone" dataKey="payables"    stroke="#e74c3c" fill="url(#grP)" strokeWidth={2} name="Payables" />
-            </AreaChart>
-          </ResponsiveContainer>
+          {cashFlowData.length === 0
+            ? <Empty message="No invoice data yet" T={T} />
+            : <ResponsiveContainer width="100%" height={isMobile ? 180 : 220}>
+                <AreaChart data={cashFlowData}>
+                  <defs>
+                    <linearGradient id="grR" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%"  stopColor="#27ae60" stopOpacity={0.25} />
+                      <stop offset="95%" stopColor="#27ae60" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke={T.border} />
+                  <XAxis dataKey="month" tick={{ fontSize: 11, fill: T.textSub }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 10, fill: T.textSub }} axisLine={false} tickLine={false} tickFormatter={v => `₦${v / 1000}k`} width={48} />
+                  <Tooltip formatter={v => fmt(v)} contentStyle={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 10, color: T.text, fontSize: 13 }} />
+                  <Area type="monotone" dataKey="receivables" stroke="#27ae60" fill="url(#grR)" strokeWidth={2} name="Receivables" />
+                </AreaChart>
+              </ResponsiveContainer>
+          }
         </div>
 
         <div style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 16, padding: "20px" }}>
           <div style={{ fontWeight: 700, fontSize: 15, color: T.text, marginBottom: 8 }}>Invoice Status</div>
-          <ResponsiveContainer width="100%" height={isMobile ? 140 : 160}>
-            <PieChart>
-              <Pie data={statusData} cx="50%" cy="50%" innerRadius={40} outerRadius={65} paddingAngle={3} dataKey="value">
-                {statusData.map((e, i) => <Cell key={i} fill={e.color} />)}
-              </Pie>
-              <Tooltip formatter={v => `${v}%`} contentStyle={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 10, color: T.text, fontSize: 13 }} />
-            </PieChart>
-          </ResponsiveContainer>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: "6px 12px", marginTop: 8 }}>
-            {statusData.map(s => (
-              <div key={s.name} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, color: T.textMid }}>
-                <div style={{ width: 8, height: 8, borderRadius: 2, background: s.color, flexShrink: 0 }} />
-                {s.name} {s.value}%
-              </div>
-            ))}
-          </div>
+          {statusData.length === 0
+            ? <Empty message="No invoices yet" T={T} />
+            : <>
+                <ResponsiveContainer width="100%" height={isMobile ? 140 : 160}>
+                  <PieChart>
+                    <Pie data={statusData} cx="50%" cy="50%" innerRadius={40} outerRadius={65} paddingAngle={3} dataKey="value">
+                      {statusData.map((e, i) => <Cell key={i} fill={e.color} />)}
+                    </Pie>
+                    <Tooltip formatter={v => `${Math.round(v / totalPct * 100)}%`} contentStyle={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 10, color: T.text, fontSize: 13 }} />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "6px 12px", marginTop: 8 }}>
+                  {statusData.map(s => (
+                    <div key={s.name} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, color: T.textMid }}>
+                      <div style={{ width: 8, height: 8, borderRadius: 2, background: s.color, flexShrink: 0 }} />
+                      {s.name} ({s.value})
+                    </div>
+                  ))}
+                </div>
+              </>
+          }
         </div>
       </div>
 
-      {/* Aging + recent invoices */}
       <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16 }}>
         <div style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 16, padding: "20px" }}>
           <div style={{ fontWeight: 700, fontSize: 15, color: T.text, marginBottom: 16 }}>Aging Report</div>
-          <ResponsiveContainer width="100%" height={160}>
-            <BarChart data={agingData} barCategoryGap="30%">
-              <CartesianGrid strokeDasharray="3 3" stroke={T.border} vertical={false} />
-              <XAxis dataKey="range" tick={{ fontSize: 10, fill: T.textSub }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 10, fill: T.textSub }} axisLine={false} tickLine={false} tickFormatter={v => `₦${v / 1000}k`} width={44} />
-              <Tooltip formatter={v => fmt(v)} contentStyle={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 10, color: T.text, fontSize: 13 }} />
-              <Bar dataKey="amount" radius={[6, 6, 0, 0]}>
-                {agingData.map((e, i) => <Cell key={i} fill={e.fill} />)}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
+          {agingData.length === 0
+            ? <Empty message="No outstanding invoices" T={T} />
+            : <ResponsiveContainer width="100%" height={160}>
+                <BarChart data={agingData} barCategoryGap="30%">
+                  <CartesianGrid strokeDasharray="3 3" stroke={T.border} vertical={false} />
+                  <XAxis dataKey="range" tick={{ fontSize: 10, fill: T.textSub }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 10, fill: T.textSub }} axisLine={false} tickLine={false} tickFormatter={v => `₦${v / 1000}k`} width={44} />
+                  <Tooltip formatter={v => fmt(v)} contentStyle={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 10, color: T.text, fontSize: 13 }} />
+                  <Bar dataKey="amount" radius={[6, 6, 0, 0]}>
+                    {agingData.map((e, i) => <Cell key={i} fill={e.fill} />)}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+          }
         </div>
 
         <div style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 16, padding: "20px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <div style={{ fontWeight: 700, fontSize: 15, color: T.text }}>Recent Invoices</div>
-            <span style={{ fontSize: 12, color: T.accent, cursor: "pointer", whiteSpace: "nowrap" }}>View all →</span>
+            <span onClick={() => onNavigate('invoices')} style={{ fontSize: 12, color: T.accent, cursor: "pointer", whiteSpace: "nowrap" }}>View all →</span>
           </div>
-          {invoices.slice(0, 4).map(inv => (
-            <div key={inv.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: `1px solid ${T.border}`, gap: 8 }}>
-              <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: T.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{inv.client}</div>
-                <div style={{ fontSize: 11, color: T.textSub }}>{inv.id}</div>
-              </div>
-              <div style={{ textAlign: "right", flexShrink: 0 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: T.text, marginBottom: 2 }}>{fmt(inv.amount)}</div>
-                <Badge status={inv.status} />
-              </div>
-            </div>
-          ))}
+          {recentInvoices.length === 0
+            ? <Empty message="No invoices yet" T={T} />
+            : recentInvoices.map(inv => (
+                <div key={inv._id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: `1px solid ${T.border}`, gap: 8 }}>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: T.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{inv.clientSnapshot?.name}</div>
+                    <div style={{ fontSize: 11, color: T.textSub }}>{inv.invoiceNumber}</div>
+                  </div>
+                  <div style={{ textAlign: "right", flexShrink: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: T.text, marginBottom: 2 }}>{fmt(inv.total)}</div>
+                    <Badge status={cap(inv.status)} />
+                  </div>
+                </div>
+              ))
+          }
         </div>
       </div>
     </div>
@@ -551,36 +566,101 @@ function Dashboard({ T, isMobile, isTablet }) {
 }
 
 // ── INVOICES ─────────────────────────────────────────────────────
+const EMPTY_ITEM = () => ({ description: '', quantity: 1, unitPrice: 0 })
+const EMPTY_FORM = () => ({ clientName: '', dueDate: '', taxRate: 0, discount: 0, notes: '', items: [EMPTY_ITEM()] })
+
 function Invoices({ T, isMobile }) {
-  const [filter, setFilter]   = useState("All")
-  const [search, setSearch]   = useState("")
-  const [showNew, setShowNew] = useState(false)
+  const [rows, setRows]           = useState([])
+  const [total, setTotal]         = useState(0)
+  const [loading, setLoading]     = useState(true)
+  const [filter, setFilter]       = useState("All")
+  const [search, setSearch]       = useState("")
+  const [debSearch, setDebSearch] = useState("")
+  const [showNew, setShowNew]     = useState(false)
+  const [form, setForm]           = useState(EMPTY_FORM())
+  const [saving, setSaving]       = useState(false)
+  const [formErr, setFormErr]     = useState("")
   const statuses = ["All", "Draft", "Sent", "Overdue", "Paid", "Partial"]
-  const filtered = invoices.filter(i =>
-    (filter === "All" || i.status === filter) &&
-    (i.client.toLowerCase().includes(search.toLowerCase()) || i.id.includes(search))
-  )
+
+  // Debounce search
+  useEffect(() => {
+    const t = setTimeout(() => setDebSearch(search), 400)
+    return () => clearTimeout(t)
+  }, [search])
+
+  // Fetch invoices
+  useEffect(() => {
+    setLoading(true)
+    const params = {}
+    if (filter !== 'All') params.status = filter.toLowerCase()
+    if (debSearch) params.search = debSearch
+    api.get('/invoices', { params })
+      .then(r => { setRows(r.data.invoices); setTotal(r.data.total) })
+      .catch(console.error)
+      .finally(() => setLoading(false))
+  }, [filter, debSearch])
+
+  function setItem(i, key, val) {
+    setForm(f => {
+      const items = [...f.items]
+      items[i] = { ...items[i], [key]: val }
+      return { ...f, items }
+    })
+  }
+  function addItem()    { setForm(f => ({ ...f, items: [...f.items, EMPTY_ITEM()] })) }
+  function removeItem(i){ setForm(f => ({ ...f, items: f.items.filter((_, j) => j !== i) })) }
+
+  const subtotal  = form.items.reduce((s, it) => s + Number(it.quantity || 0) * Number(it.unitPrice || 0), 0)
+  const taxAmt    = subtotal * Number(form.taxRate || 0) / 100
+  const invoTotal = subtotal + taxAmt - Number(form.discount || 0)
+
+  async function handleCreate() {
+    if (!form.clientName.trim()) { setFormErr('Client name is required'); return }
+    if (!form.dueDate)           { setFormErr('Due date is required');     return }
+    if (form.items.some(it => !it.description.trim())) { setFormErr('All line items need a description'); return }
+    setFormErr(''); setSaving(true)
+    try {
+      await api.post('/invoices', {
+        clientSnapshot: { name: form.clientName },
+        dueDate:   form.dueDate,
+        taxRate:   Number(form.taxRate),
+        discount:  Number(form.discount),
+        notes:     form.notes,
+        items:     form.items.map(it => ({ description: it.description, quantity: Number(it.quantity), unitPrice: Number(it.unitPrice) })),
+      })
+      setShowNew(false); setForm(EMPTY_FORM())
+      // Refresh list
+      const params = {}
+      if (filter !== 'All') params.status = filter.toLowerCase()
+      const r = await api.get('/invoices', { params })
+      setRows(r.data.invoices); setTotal(r.data.total)
+    } catch (err) {
+      setFormErr(err.response?.data?.errors?.[0]?.msg || err.response?.data?.message || 'Failed to create invoice')
+    } finally { setSaving(false) }
+  }
+
+  async function handleSend(id) {
+    await api.patch(`/invoices/${id}/status`, { status: 'sent' }).catch(console.error)
+    setRows(prev => prev.map(r => r._id === id ? { ...r, status: 'sent' } : r))
+  }
+
+  const inputSty = { width: '100%', padding: '9px 11px', borderRadius: 8, border: `1px solid ${T.border}`, background: T.surface, color: T.text, fontSize: 13, outline: 'none', boxSizing: 'border-box' }
 
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: isMobile ? "flex-start" : "center", flexDirection: isMobile ? "column" : "row", gap: 12, marginBottom: 24 }}>
         <div>
           <h2 style={{ fontSize: "clamp(18px, 4vw, 22px)", fontWeight: 800, color: T.text, margin: 0 }}>Invoices</h2>
-          <p style={{ color: T.textSub, fontSize: 14, marginTop: 4 }}>Manage your invoice lifecycle</p>
+          <p style={{ color: T.textSub, fontSize: 14, marginTop: 4 }}>{total} invoice{total !== 1 ? 's' : ''} total</p>
         </div>
-        <button onClick={() => setShowNew(true)} style={{ background: T.accent, color: "#fff", border: "none", borderRadius: 10, padding: "10px 20px", fontWeight: 700, fontSize: 14, cursor: "pointer", alignSelf: isMobile ? "flex-start" : "auto" }}>
+        <button onClick={() => { setShowNew(true); setForm(EMPTY_FORM()); setFormErr('') }}
+          style={{ background: T.accent, color: "#fff", border: "none", borderRadius: 10, padding: "10px 20px", fontWeight: 700, fontSize: 14, cursor: "pointer", alignSelf: isMobile ? "flex-start" : "auto" }}>
           + New Invoice
         </button>
       </div>
 
-      <div style={{ background: T.infoLight, border: `1px solid ${T.info}33`, borderRadius: 12, padding: "12px 16px", marginBottom: 20, overflowX: "auto" }}>
-        <div style={{ fontSize: 13, color: T.info, whiteSpace: isMobile ? "normal" : "nowrap" }}>
-          <strong>DSO:</strong> 28.4 days avg · <strong>Collection rate:</strong> 94.2% · <strong>Outstanding:</strong> ₦244,600
-        </div>
-      </div>
-
       <div style={{ display: "flex", gap: 10, marginBottom: 20, flexDirection: "column" }}>
-        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search invoices…"
+        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by client or invoice number…"
           style={{ padding: "9px 14px", borderRadius: 8, border: `1px solid ${T.border}`, background: T.surface, color: T.text, fontSize: 14, outline: "none", width: "100%", boxSizing: "border-box" }} />
         <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 2 }}>
           {statuses.map(s => (
@@ -589,90 +669,139 @@ function Invoices({ T, isMobile }) {
         </div>
       </div>
 
-      {/* Mobile card view */}
-      {isMobile ? (
+      {loading ? <Loader T={T} /> : isMobile ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {filtered.map(inv => (
-            <div key={inv.id} style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 14, padding: 16 }}>
+          {rows.map(inv => (
+            <div key={inv._id} style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 14, padding: 16 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
                 <div>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: T.accent }}>{inv.id}</div>
-                  <div style={{ fontSize: 15, fontWeight: 600, color: T.text, marginTop: 2 }}>{inv.client}</div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: T.accent }}>{inv.invoiceNumber}</div>
+                  <div style={{ fontSize: 15, fontWeight: 600, color: T.text, marginTop: 2 }}>{inv.clientSnapshot?.name}</div>
                 </div>
-                <Badge status={inv.status} />
+                <Badge status={cap(inv.status)} />
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div>
-                  <div style={{ fontSize: 18, fontWeight: 800, color: T.text }}>{fmt(inv.amount)}</div>
-                  <div style={{ fontSize: 12, color: T.textSub, marginTop: 2 }}>
-                    Due: {inv.due}
-                    {inv.days > 0 && <span style={{ color: "#e74c3c", marginLeft: 4 }}>({inv.days}d overdue)</span>}
+                  <div style={{ fontSize: 18, fontWeight: 800, color: T.text }}>{fmt(inv.total)}</div>
+                  <div style={{ fontSize: 12, color: T.textSub, marginTop: 2 }}>Due: {fmtDate(inv.dueDate)}
+                    {inv.daysOverdue > 0 && <span style={{ color: "#e74c3c", marginLeft: 4 }}>({inv.daysOverdue}d overdue)</span>}
                   </div>
                 </div>
                 <div style={{ display: "flex", gap: 6 }}>
-                  <button style={{ padding: "6px 12px", background: T.accentLight, color: T.accent, border: "none", borderRadius: 6, fontSize: 13, cursor: "pointer", fontWeight: 600 }}>View</button>
-                  {inv.status !== "Paid" && <button style={{ padding: "6px 12px", background: T.surface, color: T.textMid, border: `1px solid ${T.border}`, borderRadius: 6, fontSize: 13, cursor: "pointer" }}>Send</button>}
+                  {inv.status === 'draft' && <button onClick={() => handleSend(inv._id)} style={{ padding: "6px 12px", background: T.accentLight, color: T.accent, border: "none", borderRadius: 6, fontSize: 13, cursor: "pointer", fontWeight: 600 }}>Send</button>}
                 </div>
               </div>
             </div>
           ))}
-          {filtered.length === 0 && <div style={{ padding: 40, textAlign: "center", color: T.textSub }}>No invoices match your filter.</div>}
+          {rows.length === 0 && <Empty message="No invoices match your filter." T={T} />}
         </div>
       ) : (
-        /* Desktop table view */
         <div style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 16, overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 640 }}>
             <thead>
               <tr style={{ background: T.surface }}>
-                {["Invoice #", "Client", "Amount", "Due Date", "Status", "Actions"].map(h => (
+                {["Invoice #", "Client", "Total", "Balance", "Due Date", "Status", "Actions"].map(h => (
                   <th key={h} style={{ padding: "12px 16px", textAlign: "left", fontSize: 11, fontWeight: 700, color: T.textSub, textTransform: "uppercase", letterSpacing: 0.5, whiteSpace: "nowrap" }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {filtered.map(inv => (
-                <tr key={inv.id} style={{ borderTop: `1px solid ${T.border}`, transition: "background 0.15s" }}
+              {rows.map(inv => (
+                <tr key={inv._id} style={{ borderTop: `1px solid ${T.border}`, transition: "background 0.15s" }}
                   onMouseEnter={e => e.currentTarget.style.background = T.accentLight}
                   onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
-                  <td style={{ padding: "14px 16px", fontSize: 13, color: T.accent, fontWeight: 600, whiteSpace: "nowrap" }}>{inv.id}</td>
-                  <td style={{ padding: "14px 16px", fontSize: 14, color: T.text, fontWeight: 500 }}>{inv.client}</td>
-                  <td style={{ padding: "14px 16px", fontSize: 14, fontWeight: 700, color: T.text, whiteSpace: "nowrap" }}>{fmt(inv.amount)}</td>
+                  <td style={{ padding: "14px 16px", fontSize: 13, color: T.accent, fontWeight: 600, whiteSpace: "nowrap" }}>{inv.invoiceNumber}</td>
+                  <td style={{ padding: "14px 16px", fontSize: 14, color: T.text, fontWeight: 500 }}>{inv.clientSnapshot?.name}</td>
+                  <td style={{ padding: "14px 16px", fontSize: 14, fontWeight: 700, color: T.text, whiteSpace: "nowrap" }}>{fmt(inv.total)}</td>
+                  <td style={{ padding: "14px 16px", fontSize: 13, color: inv.balance > 0 ? T.warn : T.success, fontWeight: 600, whiteSpace: "nowrap" }}>{fmt(inv.balance)}</td>
                   <td style={{ padding: "14px 16px", fontSize: 13, color: T.textMid, whiteSpace: "nowrap" }}>
-                    {inv.due}
-                    {inv.days > 0 && <span style={{ color: "#e74c3c", fontSize: 11, marginLeft: 6 }}>({inv.days}d)</span>}
+                    {fmtDate(inv.dueDate)}
+                    {inv.daysOverdue > 0 && <span style={{ color: "#e74c3c", fontSize: 11, marginLeft: 6 }}>({inv.daysOverdue}d)</span>}
                   </td>
-                  <td style={{ padding: "14px 16px" }}><Badge status={inv.status} /></td>
+                  <td style={{ padding: "14px 16px" }}><Badge status={cap(inv.status)} /></td>
                   <td style={{ padding: "14px 16px" }}>
-                    <div style={{ display: "flex", gap: 8 }}>
-                      <button style={{ padding: "5px 10px", background: T.accentLight, color: T.accent, border: "none", borderRadius: 6, fontSize: 12, cursor: "pointer", fontWeight: 600 }}>View</button>
-                      {inv.status !== "Paid" && <button style={{ padding: "5px 10px", background: T.surface, color: T.textMid, border: `1px solid ${T.border}`, borderRadius: 6, fontSize: 12, cursor: "pointer" }}>Send</button>}
-                    </div>
+                    {inv.status === 'draft' && (
+                      <button onClick={() => handleSend(inv._id)} style={{ padding: "5px 10px", background: T.accentLight, color: T.accent, border: "none", borderRadius: 6, fontSize: 12, cursor: "pointer", fontWeight: 600 }}>Send</button>
+                    )}
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
-          {filtered.length === 0 && <div style={{ padding: 40, textAlign: "center", color: T.textSub }}>No invoices match your filter.</div>}
+          {rows.length === 0 && <Empty message="No invoices match your filter." T={T} />}
         </div>
       )}
 
-      {/* New Invoice Modal */}
       {showNew && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-          <div style={{ background: T.card, borderRadius: 20, padding: isMobile ? "24px 20px" : 32, width: "100%", maxWidth: 520, border: `1px solid ${T.border}`, maxHeight: "90vh", overflowY: "auto" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+          <div style={{ background: T.card, borderRadius: 20, padding: isMobile ? "20px 16px" : 28, width: "100%", maxWidth: 580, border: `1px solid ${T.border}`, maxHeight: "92vh", overflowY: "auto" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
               <h3 style={{ fontSize: 18, fontWeight: 800, color: T.text, margin: 0 }}>New Invoice</h3>
               <button onClick={() => setShowNew(false)} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: T.textSub }}>✕</button>
             </div>
-            {[["Client Name", "text", "Acme Ltd"], ["Invoice Number", "text", "INV-2026-007"], ["Amount (₦)", "number", "0.00"], ["Due Date", "date", ""]].map(([lbl, type, ph]) => (
-              <div key={lbl} style={{ marginBottom: 16 }}>
-                <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: T.textMid, marginBottom: 5 }}>{lbl}</label>
-                <input type={type} placeholder={ph} style={{ width: "100%", padding: "10px 12px", borderRadius: 8, border: `1px solid ${T.border}`, background: T.surface, color: T.text, fontSize: 14, outline: "none", boxSizing: "border-box" }} />
+
+            <div style={{ display: "flex", gap: 12, marginBottom: 14 }}>
+              <div style={{ flex: 2 }}>
+                <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: T.textMid, marginBottom: 4 }}>Client Name *</label>
+                <input value={form.clientName} onChange={e => setForm(f => ({ ...f, clientName: e.target.value }))} placeholder="Acme Ltd" style={inputSty} />
               </div>
-            ))}
-            <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
+              <div style={{ flex: 1 }}>
+                <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: T.textMid, marginBottom: 4 }}>Due Date *</label>
+                <input type="date" value={form.dueDate} onChange={e => setForm(f => ({ ...f, dueDate: e.target.value }))} style={inputSty} />
+              </div>
+            </div>
+
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                <label style={{ fontSize: 12, fontWeight: 600, color: T.textMid }}>Line Items *</label>
+                <button onClick={addItem} style={{ fontSize: 12, color: T.accent, background: "none", border: "none", cursor: "pointer", fontWeight: 600 }}>+ Add item</button>
+              </div>
+              <div style={{ background: T.surface, borderRadius: 8, border: `1px solid ${T.border}`, overflow: "hidden" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 72px 88px 80px 28px", gap: 0, padding: "6px 10px", background: T.accentLight, fontSize: 10, fontWeight: 700, color: T.textSub, textTransform: "uppercase", letterSpacing: 0.5 }}>
+                  {['Description','Qty','Unit Price','Amount',''].map(h => <div key={h}>{h}</div>)}
+                </div>
+                {form.items.map((it, i) => (
+                  <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr 72px 88px 80px 28px", gap: 6, padding: "6px 10px", borderTop: `1px solid ${T.border}`, alignItems: "center" }}>
+                    <input value={it.description} onChange={e => setItem(i, 'description', e.target.value)} placeholder="Item description" style={{ ...inputSty, padding: '6px 8px' }} />
+                    <input type="number" value={it.quantity} onChange={e => setItem(i, 'quantity', e.target.value)} min={0} style={{ ...inputSty, padding: '6px 8px' }} />
+                    <input type="number" value={it.unitPrice} onChange={e => setItem(i, 'unitPrice', e.target.value)} min={0} style={{ ...inputSty, padding: '6px 8px' }} />
+                    <div style={{ fontSize: 13, fontWeight: 600, color: T.text }}>{fmt(it.quantity * it.unitPrice)}</div>
+                    <button onClick={() => removeItem(i)} disabled={form.items.length === 1} style={{ background: "none", border: "none", color: "#e74c3c", cursor: "pointer", fontSize: 16, lineHeight: 1, opacity: form.items.length === 1 ? 0.3 : 1 }}>✕</button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ display: "flex", gap: 12, marginBottom: 14 }}>
+              <div style={{ flex: 1 }}>
+                <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: T.textMid, marginBottom: 4 }}>Tax Rate (%)</label>
+                <input type="number" value={form.taxRate} onChange={e => setForm(f => ({ ...f, taxRate: e.target.value }))} min={0} max={100} style={inputSty} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: T.textMid, marginBottom: 4 }}>Discount (₦)</label>
+                <input type="number" value={form.discount} onChange={e => setForm(f => ({ ...f, discount: e.target.value }))} min={0} style={inputSty} />
+              </div>
+            </div>
+
+            <div style={{ background: T.accentLight, borderRadius: 8, padding: "10px 14px", marginBottom: 14, fontSize: 13 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", color: T.textMid, marginBottom: 4 }}><span>Subtotal</span><span>{fmt(subtotal)}</span></div>
+              {Number(form.taxRate) > 0 && <div style={{ display: "flex", justifyContent: "space-between", color: T.textMid, marginBottom: 4 }}><span>Tax ({form.taxRate}%)</span><span>{fmt(taxAmt)}</span></div>}
+              {Number(form.discount) > 0 && <div style={{ display: "flex", justifyContent: "space-between", color: T.textMid, marginBottom: 4 }}><span>Discount</span><span>−{fmt(form.discount)}</span></div>}
+              <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 800, fontSize: 15, color: T.text, borderTop: `1px solid ${T.borderMid}`, paddingTop: 6, marginTop: 4 }}><span>Total</span><span>{fmt(invoTotal)}</span></div>
+            </div>
+
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: T.textMid, marginBottom: 4 }}>Notes</label>
+              <textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} rows={2} placeholder="Payment instructions, terms…" style={{ ...inputSty, resize: 'vertical' }} />
+            </div>
+
+            {formErr && <div style={{ background: T.dangerLight, border: `1px solid ${T.danger}44`, borderRadius: 8, padding: "9px 12px", marginBottom: 12, fontSize: 13, color: T.danger }}>{formErr}</div>}
+
+            <div style={{ display: "flex", gap: 10 }}>
               <button onClick={() => setShowNew(false)} style={{ flex: 1, padding: "11px", background: T.surface, color: T.textMid, border: `1px solid ${T.border}`, borderRadius: 8, fontWeight: 600, cursor: "pointer" }}>Cancel</button>
-              <button onClick={() => setShowNew(false)} style={{ flex: 2, padding: "11px", background: T.accent, color: "#fff", border: "none", borderRadius: 8, fontWeight: 700, cursor: "pointer" }}>Create Invoice</button>
+              <button onClick={handleCreate} disabled={saving} style={{ flex: 2, padding: "11px", background: saving ? T.accentMid : T.accent, color: "#fff", border: "none", borderRadius: 8, fontWeight: 700, cursor: saving ? "not-allowed" : "pointer" }}>
+                {saving ? "Creating…" : "Create Invoice"}
+              </button>
             </div>
           </div>
         </div>
@@ -683,7 +812,36 @@ function Invoices({ T, isMobile }) {
 
 // ── RECEIPTS ─────────────────────────────────────────────────────
 function Receipts({ T, isMobile }) {
-  const [drag, setDrag] = useState(false)
+  const [drag, setDrag]           = useState(false)
+  const [rows, setRows]           = useState([])
+  const [loading, setLoading]     = useState(true)
+  const [reviewCount, setReview]  = useState(0)
+  const fileRef                   = useState(null)
+
+  useEffect(() => {
+    api.get('/receipts', { params: { limit: 20 } })
+      .then(r => { setRows(r.data.receipts); })
+      .catch(console.error)
+      .finally(() => setLoading(false))
+    api.get('/receipts', { params: { needsReview: true, limit: 1 } })
+      .then(r => setReview(r.data.total))
+      .catch(() => {})
+  }, [])
+
+  async function handleFileDrop(files) {
+    if (!files?.length) return
+    const fd = new FormData()
+    fd.append('file', files[0])
+    fd.append('type', 'expense')
+    fd.append('date', new Date().toISOString())
+    fd.append('amount', '0')
+    try {
+      await api.post('/receipts', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
+      const r = await api.get('/receipts', { params: { limit: 20 } })
+      setRows(r.data.receipts)
+    } catch (e) { console.error(e) }
+  }
+
   return (
     <div>
       <div style={{ marginBottom: 24 }}>
@@ -691,39 +849,37 @@ function Receipts({ T, isMobile }) {
         <p style={{ color: T.textSub, fontSize: 14, marginTop: 4 }}>Upload, scan, and manage receipts with OCR extraction</p>
       </div>
 
-      <div onDragOver={e => { e.preventDefault(); setDrag(true) }} onDragLeave={() => setDrag(false)} onDrop={e => { e.preventDefault(); setDrag(false) }}
+      <div onDragOver={e => { e.preventDefault(); setDrag(true) }} onDragLeave={() => setDrag(false)}
+        onDrop={e => { e.preventDefault(); setDrag(false); handleFileDrop(e.dataTransfer.files) }}
         style={{ border: `2px dashed ${drag ? T.accent : T.borderMid}`, borderRadius: 16, padding: isMobile ? "28px 16px" : "40px 24px", textAlign: "center", marginBottom: 24, background: drag ? T.accentLight : T.surface, transition: "all 0.2s", cursor: "pointer" }}>
         <div style={{ fontSize: 36, marginBottom: 10 }}>📸</div>
         <div style={{ fontWeight: 700, fontSize: isMobile ? 15 : 16, color: T.text, marginBottom: 6 }}>Drop files here or click to upload</div>
         <div style={{ fontSize: 13, color: T.textSub, marginBottom: 16 }}>Supports PDF, JPG, PNG · OCR extraction in &lt;10 seconds</div>
-        <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
-          <button style={{ padding: "9px 16px", background: T.accent, color: "#fff", border: "none", borderRadius: 8, fontWeight: 600, cursor: "pointer", fontSize: 13 }}>📂 Browse Files</button>
-          <button style={{ padding: "9px 16px", background: T.surface, color: T.textMid, border: `1px solid ${T.border}`, borderRadius: 8, fontWeight: 600, cursor: "pointer", fontSize: 13 }}>📧 Email Inbox</button>
-          <button style={{ padding: "9px 16px", background: T.surface, color: T.textMid, border: `1px solid ${T.border}`, borderRadius: 8, fontWeight: 600, cursor: "pointer", fontSize: 13 }}>📷 Camera</button>
-        </div>
+        <label style={{ padding: "9px 16px", background: T.accent, color: "#fff", border: "none", borderRadius: 8, fontWeight: 600, cursor: "pointer", fontSize: 13, display: "inline-block" }}>
+          📂 Browse Files
+          <input type="file" accept=".pdf,.jpg,.jpeg,.png,.webp" style={{ display: "none" }} onChange={e => handleFileDrop(e.target.files)} />
+        </label>
       </div>
 
-      <div style={{ background: T.warnLight, border: `1px solid ${T.warn}44`, borderRadius: 12, padding: "12px 16px", marginBottom: 20, display: "flex", gap: 10, alignItems: isMobile ? "flex-start" : "center", flexDirection: isMobile ? "column" : "row" }}>
-        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+      {reviewCount > 0 && (
+        <div style={{ background: T.warnLight, border: `1px solid ${T.warn}44`, borderRadius: 12, padding: "12px 16px", marginBottom: 20, display: "flex", gap: 10, alignItems: isMobile ? "flex-start" : "center", flexDirection: isMobile ? "column" : "row" }}>
           <span style={{ fontSize: 18 }}>⚠️</span>
-          <div style={{ fontSize: 13, color: T.warn }}><strong>1 document</strong> has a field with OCR confidence below 90% — please review before saving.</div>
+          <div style={{ fontSize: 13, color: T.warn }}><strong>{reviewCount} document{reviewCount > 1 ? 's' : ''}</strong> with OCR confidence below 90% — please review before saving.</div>
+          <button onClick={() => {}} style={{ marginLeft: isMobile ? 0 : "auto", padding: "6px 14px", background: T.warn, color: "#fff", border: "none", borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: "pointer", flexShrink: 0 }}>Review</button>
         </div>
-        <button style={{ marginLeft: isMobile ? 0 : "auto", padding: "6px 14px", background: T.warn, color: "#fff", border: "none", borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: "pointer", alignSelf: isMobile ? "flex-start" : "auto", flexShrink: 0 }}>Review</button>
-      </div>
+      )}
 
       <div style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 16, overflowX: "auto" }}>
-        <div style={{ padding: "16px 20px", borderBottom: `1px solid ${T.border}`, fontWeight: 700, fontSize: 15, color: T.text }}>Recent Documents</div>
-
-        {isMobile ? (
+        <div style={{ padding: "16px 20px", borderBottom: `1px solid ${T.border}`, fontWeight: 700, fontSize: 15, color: T.text }}>Recent Receipts</div>
+        {loading ? <Loader T={T} /> : rows.length === 0 ? <Empty message="No receipts yet — upload one above." T={T} /> : isMobile ? (
           <div>
-            {recentDocs.map(doc => (
-              <div key={doc.name} style={{ padding: "14px 16px", borderBottom: `1px solid ${T.border}` }}>
+            {rows.map(doc => (
+              <div key={doc._id} style={{ padding: "14px 16px", borderBottom: `1px solid ${T.border}` }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: T.text, flex: 1, marginRight: 8 }}>📄 {doc.name}</div>
-                  <span style={{ background: doc.type === "Receipt" ? T.accentLight : T.infoLight, color: doc.type === "Receipt" ? T.accent : T.info, padding: "2px 8px", borderRadius: 10, fontSize: 11, fontWeight: 600, flexShrink: 0 }}>{doc.type}</span>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: T.text, flex: 1, marginRight: 8 }}>📄 {doc.file?.name || doc.receiptNumber}</div>
+                  <span style={{ background: T.accentLight, color: T.accent, padding: "2px 8px", borderRadius: 10, fontSize: 11, fontWeight: 600 }}>{cap(doc.type)}</span>
                 </div>
-                <div style={{ fontSize: 12, color: T.textSub }}>{doc.vendor} · {doc.date} · {doc.size}</div>
-                <button style={{ marginTop: 8, padding: "4px 10px", background: T.surface, color: T.textMid, border: `1px solid ${T.border}`, borderRadius: 6, fontSize: 12, cursor: "pointer" }}>Preview</button>
+                <div style={{ fontSize: 12, color: T.textSub }}>{doc.vendorSnapshot?.name || '—'} · {fmtDate(doc.date)} · {fmt(doc.amount)}</div>
               </div>
             ))}
           </div>
@@ -731,26 +887,22 @@ function Receipts({ T, isMobile }) {
           <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 560 }}>
             <thead>
               <tr style={{ background: T.surface }}>
-                {["File", "Type", "Vendor / Source", "Size", "Date", ""].map(h => (
+                {["File / Number", "Type", "Vendor", "Amount", "Date", "OCR"].map(h => (
                   <th key={h} style={{ padding: "10px 16px", textAlign: "left", fontSize: 11, fontWeight: 700, color: T.textSub, textTransform: "uppercase", letterSpacing: 0.5, whiteSpace: "nowrap" }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {recentDocs.map(doc => (
-                <tr key={doc.name} style={{ borderTop: `1px solid ${T.border}` }}
+              {rows.map(doc => (
+                <tr key={doc._id} style={{ borderTop: `1px solid ${T.border}` }}
                   onMouseEnter={e => e.currentTarget.style.background = T.accentLight}
                   onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
-                  <td style={{ padding: "12px 16px", fontSize: 13, color: T.text, fontWeight: 500 }}>📄 {doc.name}</td>
-                  <td style={{ padding: "12px 16px" }}>
-                    <span style={{ background: doc.type === "Receipt" ? T.accentLight : T.infoLight, color: doc.type === "Receipt" ? T.accent : T.info, padding: "2px 8px", borderRadius: 10, fontSize: 11, fontWeight: 600 }}>{doc.type}</span>
-                  </td>
-                  <td style={{ padding: "12px 16px", fontSize: 13, color: T.textMid, whiteSpace: "nowrap" }}>{doc.vendor}</td>
-                  <td style={{ padding: "12px 16px", fontSize: 13, color: T.textSub, whiteSpace: "nowrap" }}>{doc.size}</td>
-                  <td style={{ padding: "12px 16px", fontSize: 13, color: T.textSub, whiteSpace: "nowrap" }}>{doc.date}</td>
-                  <td style={{ padding: "12px 16px" }}>
-                    <button style={{ padding: "4px 10px", background: T.surface, color: T.textMid, border: `1px solid ${T.border}`, borderRadius: 6, fontSize: 12, cursor: "pointer" }}>Preview</button>
-                  </td>
+                  <td style={{ padding: "12px 16px", fontSize: 13, color: T.text }}>📄 {doc.file?.name || doc.receiptNumber}</td>
+                  <td style={{ padding: "12px 16px" }}><span style={{ background: T.accentLight, color: T.accent, padding: "2px 8px", borderRadius: 10, fontSize: 11, fontWeight: 600 }}>{cap(doc.type)}</span></td>
+                  <td style={{ padding: "12px 16px", fontSize: 13, color: T.textMid }}>{doc.vendorSnapshot?.name || '—'}</td>
+                  <td style={{ padding: "12px 16px", fontSize: 13, fontWeight: 600, color: T.text }}>{fmt(doc.amount)}</td>
+                  <td style={{ padding: "12px 16px", fontSize: 13, color: T.textSub, whiteSpace: "nowrap" }}>{fmtDate(doc.date)}</td>
+                  <td style={{ padding: "12px 16px", fontSize: 12, color: doc.needsReview ? T.warn : T.success }}>{doc.ocr?.status || '—'}</td>
                 </tr>
               ))}
             </tbody>
@@ -762,8 +914,40 @@ function Receipts({ T, isMobile }) {
 }
 
 // ── VENDORS & CLIENTS ────────────────────────────────────────────
+const EMPTY_VC = () => ({ name: '', email: '', phone: '', paymentTerms: 'Net 30', paymentStatus: 'Good', creditLimit: 0 })
+
 function VendorsClients({ T, isMobile }) {
-  const [tab, setTab] = useState("vendors")
+  const [tab, setTab]         = useState("vendors")
+  const [rows, setRows]       = useState([])
+  const [loading, setLoading] = useState(true)
+  const [showAdd, setShowAdd] = useState(false)
+  const [form, setForm]       = useState(EMPTY_VC())
+  const [saving, setSaving]   = useState(false)
+  const [addErr, setAddErr]   = useState("")
+
+  useEffect(() => {
+    setLoading(true)
+    api.get(`/${tab}`)
+      .then(r => setRows(r.data[tab]))
+      .catch(console.error)
+      .finally(() => setLoading(false))
+  }, [tab])
+
+  async function handleAdd() {
+    if (!form.name.trim()) { setAddErr('Name is required'); return }
+    setSaving(true); setAddErr('')
+    try {
+      await api.post(`/${tab}`, form)
+      setShowAdd(false); setForm(EMPTY_VC())
+      const r = await api.get(`/${tab}`)
+      setRows(r.data[tab])
+    } catch (e) {
+      setAddErr(e.response?.data?.errors?.[0]?.msg || e.response?.data?.message || 'Failed to save')
+    } finally { setSaving(false) }
+  }
+
+  const inputSty = { width: '100%', padding: '9px 11px', borderRadius: 8, border: `1px solid ${T.border}`, background: T.surface, color: T.text, fontSize: 13, outline: 'none', boxSizing: 'border-box' }
+
   return (
     <div>
       <div style={{ marginBottom: 24 }}>
@@ -774,48 +958,121 @@ function VendorsClients({ T, isMobile }) {
         {["vendors", "clients"].map(t => (
           <button key={t} onClick={() => setTab(t)} style={{ padding: "9px 20px", borderRadius: 8, border: `1px solid ${tab === t ? T.accent : T.border}`, background: tab === t ? T.accentLight : T.surface, color: tab === t ? T.accent : T.textMid, fontWeight: tab === t ? 700 : 400, fontSize: 14, cursor: "pointer", textTransform: "capitalize" }}>{t}</button>
         ))}
-        <button style={{ marginLeft: "auto", padding: "9px 18px", background: T.accent, color: "#fff", border: "none", borderRadius: 8, fontWeight: 600, fontSize: 14, cursor: "pointer" }}>+ Add {tab.slice(0, -1)}</button>
+        <button onClick={() => { setShowAdd(true); setForm(EMPTY_VC()); setAddErr('') }}
+          style={{ marginLeft: "auto", padding: "9px 18px", background: T.accent, color: "#fff", border: "none", borderRadius: 8, fontWeight: 600, fontSize: 14, cursor: "pointer" }}>
+          + Add {tab.slice(0, -1)}
+        </button>
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fill, minmax(260px, 1fr))", gap: 16 }}>
-        {vendors.map(v => (
-          <div key={v.name} style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 16, padding: 20, transition: "transform 0.2s", cursor: "pointer" }}
-            onMouseEnter={e => e.currentTarget.style.transform = "translateY(-2px)"}
-            onMouseLeave={e => e.currentTarget.style.transform = "none"}>
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12, alignItems: "flex-start" }}>
-              <div style={{ width: 40, height: 40, background: T.accentLight, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>🏢</div>
-              <Badge status={v.status} />
+
+      {loading ? <Loader T={T} /> : rows.length === 0 ? <Empty message={`No ${tab} yet.`} T={T} /> : (
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fill, minmax(260px, 1fr))", gap: 16 }}>
+          {rows.map(v => (
+            <div key={v._id} style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 16, padding: 20, transition: "transform 0.2s", cursor: "pointer" }}
+              onMouseEnter={e => e.currentTarget.style.transform = "translateY(-2px)"}
+              onMouseLeave={e => e.currentTarget.style.transform = "none"}>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12, alignItems: "flex-start" }}>
+                <div style={{ width: 40, height: 40, background: T.accentLight, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>🏢</div>
+                {v.paymentStatus && <Badge status={v.paymentStatus} />}
+                {v.status && <Badge status={cap(v.status)} />}
+              </div>
+              <div style={{ fontWeight: 700, fontSize: 15, color: T.text, marginBottom: 4 }}>{v.name}</div>
+              <div style={{ fontSize: 12, color: T.textSub, marginBottom: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{v.email || v.contact || '—'}</div>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
+                <span style={{ color: T.textMid }}>Terms: <strong>{v.paymentTerms || '—'}</strong></span>
+                <span style={{ fontWeight: 700, color: v.balance > 0 ? T.warn : T.textSub }}>{fmt(v.balance)}</span>
+              </div>
             </div>
-            <div style={{ fontWeight: 700, fontSize: 15, color: T.text, marginBottom: 4 }}>{v.name}</div>
-            <div style={{ fontSize: 12, color: T.textSub, marginBottom: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{v.contact}</div>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
-              <span style={{ color: T.textMid }}>Terms: <strong>{v.terms}</strong></span>
-              <span style={{ fontWeight: 700, color: v.status === "Good" ? T.accent : "#e74c3c" }}>₦{v.balance.toLocaleString()}</span>
+          ))}
+        </div>
+      )}
+
+      {showAdd && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+          <div style={{ background: T.card, borderRadius: 20, padding: 28, width: "100%", maxWidth: 440, border: `1px solid ${T.border}` }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+              <h3 style={{ fontSize: 17, fontWeight: 800, color: T.text, margin: 0 }}>Add {tab.slice(0, -1)}</h3>
+              <button onClick={() => setShowAdd(false)} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: T.textSub }}>✕</button>
+            </div>
+            {[['Name *', 'name', 'text'], ['Email', 'email', 'email'], ['Phone', 'phone', 'tel'], ['Payment Terms', 'paymentTerms', 'text']].map(([lbl, key, type]) => (
+              <div key={key} style={{ marginBottom: 14 }}>
+                <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: T.textMid, marginBottom: 4 }}>{lbl}</label>
+                <input type={type} value={form[key]} onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))} style={inputSty} />
+              </div>
+            ))}
+            {tab === 'vendors' && (
+              <div style={{ marginBottom: 14 }}>
+                <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: T.textMid, marginBottom: 4 }}>Payment Status</label>
+                <select value={form.paymentStatus} onChange={e => setForm(f => ({ ...f, paymentStatus: e.target.value }))} style={inputSty}>
+                  {['Good', 'Late', 'Dispute'].map(s => <option key={s}>{s}</option>)}
+                </select>
+              </div>
+            )}
+            {tab === 'clients' && (
+              <div style={{ marginBottom: 14 }}>
+                <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: T.textMid, marginBottom: 4 }}>Credit Limit (₦)</label>
+                <input type="number" value={form.creditLimit} onChange={e => setForm(f => ({ ...f, creditLimit: e.target.value }))} min={0} style={inputSty} />
+              </div>
+            )}
+            {addErr && <div style={{ background: T.dangerLight, border: `1px solid ${T.danger}44`, borderRadius: 8, padding: "9px 12px", marginBottom: 12, fontSize: 13, color: T.danger }}>{addErr}</div>}
+            <div style={{ display: "flex", gap: 10 }}>
+              <button onClick={() => setShowAdd(false)} style={{ flex: 1, padding: "11px", background: T.surface, color: T.textMid, border: `1px solid ${T.border}`, borderRadius: 8, fontWeight: 600, cursor: "pointer" }}>Cancel</button>
+              <button onClick={handleAdd} disabled={saving} style={{ flex: 2, padding: "11px", background: saving ? T.accentMid : T.accent, color: "#fff", border: "none", borderRadius: 8, fontWeight: 700, cursor: saving ? "not-allowed" : "pointer" }}>
+                {saving ? "Saving…" : `Add ${cap(tab.slice(0, -1))}`}
+              </button>
             </div>
           </div>
-        ))}
-      </div>
+        </div>
+      )}
     </div>
   )
 }
 
 // ── DOCUMENTS ────────────────────────────────────────────────────
 function Documents({ T, isMobile }) {
-  const [search, setSearch] = useState("")
+  const [search, setSearch]   = useState("")
+  const [debSearch, setDeb]   = useState("")
+  const [rows, setRows]       = useState([])
+  const [counts, setCounts]   = useState({ receipt: 0, invoice: 0, archived: 0 })
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const t = setTimeout(() => setDeb(search), 400)
+    return () => clearTimeout(t)
+  }, [search])
+
+  useEffect(() => {
+    setLoading(true)
+    const params = { limit: 30 }
+    if (debSearch) params.search = debSearch
+    api.get('/documents', { params })
+      .then(r => setRows(r.data.documents))
+      .catch(console.error)
+      .finally(() => setLoading(false))
+  }, [debSearch])
+
+  useEffect(() => {
+    Promise.all([
+      api.get('/documents', { params: { type: 'receipt', limit: 1 } }),
+      api.get('/documents', { params: { type: 'invoice', limit: 1 } }),
+      api.get('/documents', { params: { archived: true,  limit: 1 } }),
+    ]).then(([r, inv, arch]) => setCounts({ receipt: r.data.total, invoice: inv.data.total, archived: arch.data.total }))
+      .catch(() => {})
+  }, [])
+
   return (
     <div>
       <div style={{ marginBottom: 24 }}>
         <h2 style={{ fontSize: "clamp(18px, 4vw, 22px)", fontWeight: 800, color: T.text, margin: 0 }}>Document Storage</h2>
-        <p style={{ color: T.textSub, fontSize: 14, marginTop: 4 }}>Cloud-based secure repository · 7-year retention</p>
+        <p style={{ color: T.textSub, fontSize: 14, marginTop: 4 }}>Secure repository · 7-year retention</p>
       </div>
+
       <div style={{ display: "flex", gap: 10, marginBottom: 20, flexWrap: "wrap" }}>
-        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by vendor, amount, date, keyword…"
+        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by vendor, keyword, filename…"
           style={{ flex: "1 1 200px", padding: "10px 14px", borderRadius: 8, border: `1px solid ${T.border}`, background: T.surface, color: T.text, fontSize: 14, outline: "none", minWidth: 0 }} />
-        <button style={{ padding: "10px 16px", background: T.accent, color: "#fff", border: "none", borderRadius: 8, fontWeight: 600, cursor: "pointer", fontSize: 13 }}>Search</button>
-        <button style={{ padding: "10px 16px", background: T.surface, color: T.textMid, border: `1px solid ${T.border}`, borderRadius: 8, fontWeight: 600, cursor: "pointer", fontSize: 13 }}>📦 Export</button>
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3,1fr)", gap: 12, marginBottom: 24 }}>
-        {[["📄 Receipts", "128", T.accent], ["🧾 Invoices", "94", T.info], ["📦 Archived", "340", T.textSub]].map(([lbl, n, c]) => (
+        {[["📄 Receipts", counts.receipt, T.accent], ["🧾 Invoices", counts.invoice, T.info], ["📦 Archived", counts.archived, T.textSub]].map(([lbl, n, c]) => (
           <div key={lbl} style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 12, padding: "16px 20px" }}>
             <div style={{ fontSize: 22, fontWeight: 800, color: c }}>{n}</div>
             <div style={{ fontSize: 13, color: T.textMid, marginTop: 2 }}>{lbl}</div>
@@ -824,21 +1081,21 @@ function Documents({ T, isMobile }) {
       </div>
 
       <div style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 16, overflow: "hidden" }}>
-        {recentDocs.concat(recentDocs).map((doc, i) => (
-          <div key={i} style={{ display: "flex", alignItems: isMobile ? "flex-start" : "center", gap: 12, padding: "14px 16px", borderBottom: `1px solid ${T.border}`, transition: "background 0.15s", flexDirection: isMobile ? "column" : "row" }}
+        {loading ? <Loader T={T} /> : rows.length === 0 ? <Empty message="No documents found." T={T} /> : rows.map((doc) => (
+          <div key={doc._id} style={{ display: "flex", alignItems: isMobile ? "flex-start" : "center", gap: 12, padding: "14px 16px", borderBottom: `1px solid ${T.border}`, transition: "background 0.15s", flexDirection: isMobile ? "column" : "row" }}
             onMouseEnter={e => e.currentTarget.style.background = T.accentLight}
             onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
             <div style={{ display: "flex", alignItems: "center", gap: 12, flex: 1, minWidth: 0 }}>
               <span style={{ fontSize: 22, flexShrink: 0 }}>📄</span>
               <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: T.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{doc.name}</div>
-                <div style={{ fontSize: 12, color: T.textSub }}>{doc.vendor} · {doc.date} · {doc.size}</div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: T.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{doc.fileName}</div>
+                <div style={{ fontSize: 12, color: T.textSub }}>{doc.entityName || '—'} · {fmtDate(doc.createdAt)} · {doc.fileSize ? `${Math.round(doc.fileSize / 1024)} KB` : '—'}</div>
               </div>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-              <span style={{ background: doc.type === "Receipt" ? T.accentLight : T.infoLight, color: doc.type === "Receipt" ? T.accent : T.info, padding: "2px 8px", borderRadius: 10, fontSize: 11, fontWeight: 600 }}>{doc.type}</span>
-              <button style={{ padding: "5px 10px", background: T.surface, color: T.textMid, border: `1px solid ${T.border}`, borderRadius: 6, fontSize: 12, cursor: "pointer" }}>Preview</button>
-              <button style={{ padding: "5px 10px", background: T.surface, color: T.textMid, border: `1px solid ${T.border}`, borderRadius: 6, fontSize: 12, cursor: "pointer" }}>↓</button>
+              <span style={{ background: doc.type === "receipt" ? T.accentLight : T.infoLight, color: doc.type === "receipt" ? T.accent : T.info, padding: "2px 8px", borderRadius: 10, fontSize: 11, fontWeight: 600 }}>{cap(doc.type)}</span>
+              <a href={`http://localhost:5000${doc.fileUrl}`} target="_blank" rel="noreferrer"
+                style={{ padding: "5px 10px", background: T.surface, color: T.textMid, border: `1px solid ${T.border}`, borderRadius: 6, fontSize: 12, cursor: "pointer", textDecoration: "none" }}>↓</a>
             </div>
           </div>
         ))}
@@ -849,11 +1106,18 @@ function Documents({ T, isMobile }) {
 
 // ── REPORTS ──────────────────────────────────────────────────────
 function Reports({ T, isMobile, isTablet }) {
-  const monthly = [
-    { m: "Jan", rev: 82000, exp: 45000 }, { m: "Feb", rev: 91000, exp: 52000 },
-    { m: "Mar", rev: 75000, exp: 38000 }, { m: "Apr", rev: 110000, exp: 61000 },
-    { m: "May", rev: 98000, exp: 54000 },
-  ]
+  const [data, setData]       = useState(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    api.get('/dashboard')
+      .then(r => setData(r.data))
+      .catch(console.error)
+      .finally(() => setLoading(false))
+  }, [])
+
+  const cashFlowData = (data?.cashFlow || []).map(d => ({ month: MONTHS[d._id.month - 1], receivables: d.receivables }))
+
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: isMobile ? "flex-start" : "center", flexDirection: isMobile ? "column" : "row", gap: 12, marginBottom: 24 }}>
@@ -867,45 +1131,52 @@ function Reports({ T, isMobile, isTablet }) {
         </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: isTablet ? "1fr" : "1fr 1fr", gap: 16, marginBottom: 16 }}>
-        <div style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 16, padding: 20 }}>
-          <div style={{ fontWeight: 700, fontSize: 15, color: T.text, marginBottom: 16 }}>Monthly Revenue vs Expenses</div>
-          <ResponsiveContainer width="100%" height={isMobile ? 180 : 220}>
-            <BarChart data={monthly} barCategoryGap="25%">
-              <CartesianGrid strokeDasharray="3 3" stroke={T.border} vertical={false} />
-              <XAxis dataKey="m" tick={{ fontSize: 11, fill: T.textSub }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 10, fill: T.textSub }} axisLine={false} tickLine={false} tickFormatter={v => `₦${v / 1000}k`} width={44} />
-              <Tooltip formatter={v => fmt(v)} contentStyle={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 10, color: T.text, fontSize: 13 }} />
-              <Bar dataKey="rev" fill="#27ae60" radius={[4, 4, 0, 0]} name="Revenue" />
-              <Bar dataKey="exp" fill="#e74c3c" radius={[4, 4, 0, 0]} name="Expenses" />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-        <div style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 16, padding: 20 }}>
-          <div style={{ fontWeight: 700, fontSize: 15, color: T.text, marginBottom: 16 }}>Net Cash Flow Trend</div>
-          <ResponsiveContainer width="100%" height={isMobile ? 180 : 220}>
-            <LineChart data={cashFlowData}>
-              <CartesianGrid strokeDasharray="3 3" stroke={T.border} />
-              <XAxis dataKey="month" tick={{ fontSize: 11, fill: T.textSub }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 10, fill: T.textSub }} axisLine={false} tickLine={false} tickFormatter={v => `₦${v / 1000}k`} width={44} />
-              <Tooltip formatter={v => fmt(v)} contentStyle={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 10, color: T.text, fontSize: 13 }} />
-              <Line type="monotone" dataKey="net" stroke="#3498db" strokeWidth={2.5} dot={{ fill: "#3498db", r: 4 }} name="Net Flow" />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-
-      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : isTablet ? "repeat(2,1fr)" : "repeat(3,1fr)", gap: 12 }}>
-        {["Monthly Summary", "Quarterly Report", "Annual Statement", "Aging Report", "Tax Report", "Audit Trail"].map(r => (
-          <div key={r} style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 12, padding: "16px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}>
-            <div>
-              <div style={{ fontWeight: 600, fontSize: 14, color: T.text }}>{r}</div>
-              <div style={{ fontSize: 12, color: T.textSub, marginTop: 2 }}>Last generated: May 2026</div>
+      {loading ? <Loader T={T} /> : (
+        <>
+          <div style={{ display: "grid", gridTemplateColumns: isTablet ? "1fr" : "1fr 1fr", gap: 16, marginBottom: 16 }}>
+            <div style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 16, padding: 20 }}>
+              <div style={{ fontWeight: 700, fontSize: 15, color: T.text, marginBottom: 16 }}>Monthly Revenue</div>
+              {cashFlowData.length === 0 ? <Empty message="No data yet" T={T} /> : (
+                <ResponsiveContainer width="100%" height={isMobile ? 180 : 220}>
+                  <BarChart data={cashFlowData} barCategoryGap="25%">
+                    <CartesianGrid strokeDasharray="3 3" stroke={T.border} vertical={false} />
+                    <XAxis dataKey="month" tick={{ fontSize: 11, fill: T.textSub }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fontSize: 10, fill: T.textSub }} axisLine={false} tickLine={false} tickFormatter={v => `₦${v / 1000}k`} width={44} />
+                    <Tooltip formatter={v => fmt(v)} contentStyle={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 10, color: T.text, fontSize: 13 }} />
+                    <Bar dataKey="receivables" fill="#27ae60" radius={[4, 4, 0, 0]} name="Revenue" />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
             </div>
-            <span style={{ fontSize: 20 }}>📄</span>
+            <div style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 16, padding: 20 }}>
+              <div style={{ fontWeight: 700, fontSize: 15, color: T.text, marginBottom: 16 }}>Receivables Trend</div>
+              {cashFlowData.length === 0 ? <Empty message="No data yet" T={T} /> : (
+                <ResponsiveContainer width="100%" height={isMobile ? 180 : 220}>
+                  <LineChart data={cashFlowData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={T.border} />
+                    <XAxis dataKey="month" tick={{ fontSize: 11, fill: T.textSub }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fontSize: 10, fill: T.textSub }} axisLine={false} tickLine={false} tickFormatter={v => `₦${v / 1000}k`} width={44} />
+                    <Tooltip formatter={v => fmt(v)} contentStyle={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 10, color: T.text, fontSize: 13 }} />
+                    <Line type="monotone" dataKey="receivables" stroke="#3498db" strokeWidth={2.5} dot={{ fill: "#3498db", r: 4 }} name="Receivables" />
+                  </LineChart>
+                </ResponsiveContainer>
+              )}
+            </div>
           </div>
-        ))}
-      </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : isTablet ? "repeat(2,1fr)" : "repeat(3,1fr)", gap: 12 }}>
+            {["Monthly Summary", "Quarterly Report", "Annual Statement", "Aging Report", "Tax Report", "Audit Trail"].map(r => (
+              <div key={r} style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 12, padding: "16px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}>
+                <div>
+                  <div style={{ fontWeight: 600, fontSize: 14, color: T.text }}>{r}</div>
+                  <div style={{ fontSize: 12, color: T.textSub, marginTop: 2 }}>Coming soon</div>
+                </div>
+                <span style={{ fontSize: 20 }}>📄</span>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   )
 }
@@ -1044,7 +1315,7 @@ export default function App() {
 
         {/* Page content */}
         <div style={{ padding: isMobile ? "16px" : "28px" }}>
-          <Page T={T} isMobile={isMobile} isTablet={isTablet} />
+          <Page T={T} isMobile={isMobile} isTablet={isTablet} onNavigate={setActive} />
         </div>
       </div>
 
