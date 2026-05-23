@@ -35,6 +35,7 @@ app.use('/api/vendors',   require('./routes/vendors'));
 app.use('/api/clients',   require('./routes/clients'));
 app.use('/api/documents', require('./routes/documents'));
 app.use('/api/dashboard', require('./routes/dashboard'));
+app.use('/api/reports',  require('./routes/reports'));
 
 // --- Health check ---
 app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));

@@ -47,7 +47,19 @@ const create = async (req, res, next) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) return res.status(422).json({ errors: errors.array() });
 
-    const receipt = await Receipt.create({ ...req.body, createdBy: req.user.id });
+    const data = { ...req.body, createdBy: req.user.id };
+
+    if (req.file) {
+      data.file = {
+        url:      `/uploads/${req.file.filename}`,
+        path:     req.file.path,
+        name:     req.file.originalname,
+        size:     req.file.size,
+        mimeType: req.file.mimetype,
+      };
+    }
+
+    const receipt = await Receipt.create(data);
     res.status(201).json({ receipt });
   } catch (err) {
     next(err);

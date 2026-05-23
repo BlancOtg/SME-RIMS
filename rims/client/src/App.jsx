@@ -200,8 +200,15 @@ function Login({ onLogin, onSignupInstead, T }) {
 }
 
 // ── SIGNUP ───────────────────────────────────────────────────────
+const ROLES = [
+  { value: "admin",      icon: "👑", label: "Admin",       desc: "Full access & user management"     },
+  { value: "accountant", icon: "📊", label: "Accountant",  desc: "Invoices, receipts & reports"      },
+  { value: "vendor",     icon: "🏢", label: "Vendor",      desc: "View invoices & payment history"   },
+  { value: "client",     icon: "👤", label: "Client",      desc: "Access statements & documents"     },
+]
+
 function Signup({ onSignup, onLoginInstead, T }) {
-  const [form, setForm]           = useState({ firstName: "", lastName: "", email: "", password: "", confirm: "" })
+  const [form, setForm]           = useState({ firstName: "", lastName: "", email: "", password: "", confirm: "", role: "accountant" })
   const [errs, setErrs]           = useState({})
   const [loading, setLoading]     = useState(false)
   const [shake, setShake]         = useState(false)
@@ -241,6 +248,7 @@ function Signup({ onSignup, onLoginInstead, T }) {
         lastName:  form.lastName,
         email:     form.email,
         password:  form.password,
+        role:      form.role,
       })
       localStorage.setItem('rims_token', data.token)
       onSignup(data)
@@ -287,6 +295,25 @@ function Signup({ onSignup, onLoginInstead, T }) {
         <p style={{ fontSize: 14, color: T.textSub, marginBottom: 24 }}>Get started with RIMS today</p>
 
         <form onSubmit={handleSubmit} style={{ animation: shake ? "shake 0.4s ease" : "none" }}>
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: T.textMid, marginBottom: 8 }}>I am a…</label>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+              {ROLES.map(r => {
+                const selected = form.role === r.value
+                return (
+                  <div key={r.value} onClick={() => setForm(f => ({ ...f, role: r.value }))}
+                    style={{ border: `2px solid ${selected ? T.accent : T.border}`, borderRadius: 10, padding: "10px 12px", cursor: "pointer", background: selected ? T.accentLight : T.surface, transition: "all 0.15s", display: "flex", alignItems: "flex-start", gap: 8 }}>
+                    <span style={{ fontSize: 18, flexShrink: 0, marginTop: 1 }}>{r.icon}</span>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: selected ? T.accent : T.text }}>{r.label}</div>
+                      <div style={{ fontSize: 11, color: T.textSub, marginTop: 1, lineHeight: 1.3 }}>{r.desc}</div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+
           <div style={{ display: "flex", gap: 12 }}>
             <div style={{ flex: 1, minWidth: 0 }}><SignupField label="First Name" value={form.firstName} onChange={set("firstName")} placeholder="Amara"  error={errs.firstName} T={T} /></div>
             <div style={{ flex: 1, minWidth: 0 }}><SignupField label="Last Name"  value={form.lastName}  onChange={set("lastName")}  placeholder="Okafor" error={errs.lastName}  T={T} /></div>
@@ -836,7 +863,7 @@ function Receipts({ T, isMobile }) {
     fd.append('date', new Date().toISOString())
     fd.append('amount', '0')
     try {
-      await api.post('/receipts', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
+      await api.post('/receipts', fd)
       const r = await api.get('/receipts', { params: { limit: 20 } })
       setRows(r.data.receipts)
     } catch (e) { console.error(e) }
@@ -1105,9 +1132,39 @@ function Documents({ T, isMobile }) {
 }
 
 // ── REPORTS ──────────────────────────────────────────────────────
+const REPORT_CARDS = [
+  { label: "Invoice Report",    sub: "All invoices with totals & status", endpoint: "/reports/invoices",  icon: "🧾" },
+  { label: "Receipt Report",    sub: "All receipts and expense records",  endpoint: "/reports/receipts",  icon: "📄" },
+  { label: "Financial Summary", sub: "Yearly income vs expenses",         endpoint: "/reports/summary",   icon: "📊" },
+  { label: "Aging Report",      sub: "Outstanding invoices by age",       endpoint: "/reports/aging",     icon: "⏳" },
+  { label: "Invoice Report",    sub: "Excel format with totals",          endpoint: "/reports/invoices",  icon: "🧾", fmt: "excel" },
+  { label: "Receipt Report",    sub: "Excel format with summaries",       endpoint: "/reports/receipts",  icon: "📄", fmt: "excel" },
+]
+
+async function downloadReport(endpoint, format = "pdf") {
+  try {
+    const ext = format === "excel" ? "xlsx" : "pdf"
+    const { data, headers } = await api.get(endpoint, {
+      params: { format },
+      responseType: "blob",
+    })
+    const cd = headers["content-disposition"] || ""
+    const match = cd.match(/filename="?([^"]+)"?/)
+    const filename = match ? match[1] : `report.${ext}`
+    const url = URL.createObjectURL(new Blob([data]))
+    const a = document.createElement("a")
+    a.href = url; a.download = filename; a.click()
+    URL.revokeObjectURL(url)
+  } catch (e) {
+    console.error("Export failed:", e)
+    alert("Export failed. Please try again.")
+  }
+}
+
 function Reports({ T, isMobile, isTablet }) {
-  const [data, setData]       = useState(null)
-  const [loading, setLoading] = useState(true)
+  const [data, setData]           = useState(null)
+  const [loading, setLoading]     = useState(true)
+  const [downloading, setDl]      = useState(null)
 
   useEffect(() => {
     api.get('/dashboard')
@@ -1118,6 +1175,12 @@ function Reports({ T, isMobile, isTablet }) {
 
   const cashFlowData = (data?.cashFlow || []).map(d => ({ month: MONTHS[d._id.month - 1], receivables: d.receivables }))
 
+  async function handleDownload(endpoint, format, key) {
+    setDl(key)
+    await downloadReport(endpoint, format)
+    setDl(null)
+  }
+
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: isMobile ? "flex-start" : "center", flexDirection: isMobile ? "column" : "row", gap: 12, marginBottom: 24 }}>
@@ -1126,8 +1189,16 @@ function Reports({ T, isMobile, isTablet }) {
           <p style={{ color: T.textSub, fontSize: 14, marginTop: 4 }}>Financial summaries and trend analysis</p>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
-          <button style={{ padding: "8px 14px", background: T.surface, color: T.textMid, border: `1px solid ${T.border}`, borderRadius: 8, fontSize: 13, cursor: "pointer" }}>📥 PDF</button>
-          <button style={{ padding: "8px 14px", background: T.surface, color: T.textMid, border: `1px solid ${T.border}`, borderRadius: 8, fontSize: 13, cursor: "pointer" }}>📊 Excel</button>
+          <button onClick={() => handleDownload("/reports/summary", "pdf", "summary-pdf")}
+            disabled={downloading === "summary-pdf"}
+            style={{ padding: "8px 14px", background: T.surface, color: T.textMid, border: `1px solid ${T.border}`, borderRadius: 8, fontSize: 13, cursor: "pointer", opacity: downloading === "summary-pdf" ? 0.6 : 1 }}>
+            {downloading === "summary-pdf" ? "Exporting…" : "📥 PDF"}
+          </button>
+          <button onClick={() => handleDownload("/reports/summary", "excel", "summary-excel")}
+            disabled={downloading === "summary-excel"}
+            style={{ padding: "8px 14px", background: T.surface, color: T.textMid, border: `1px solid ${T.border}`, borderRadius: 8, fontSize: 13, cursor: "pointer", opacity: downloading === "summary-excel" ? 0.6 : 1 }}>
+            {downloading === "summary-excel" ? "Exporting…" : "📊 Excel"}
+          </button>
         </div>
       </div>
 
@@ -1165,15 +1236,25 @@ function Reports({ T, isMobile, isTablet }) {
           </div>
 
           <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : isTablet ? "repeat(2,1fr)" : "repeat(3,1fr)", gap: 12 }}>
-            {["Monthly Summary", "Quarterly Report", "Annual Statement", "Aging Report", "Tax Report", "Audit Trail"].map(r => (
-              <div key={r} style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 12, padding: "16px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}>
-                <div>
-                  <div style={{ fontWeight: 600, fontSize: 14, color: T.text }}>{r}</div>
-                  <div style={{ fontSize: 12, color: T.textSub, marginTop: 2 }}>Coming soon</div>
+            {REPORT_CARDS.map((card, i) => {
+              const format = card.fmt || "pdf"
+              const key = `card-${i}`
+              const isLoading = downloading === key
+              return (
+                <div key={i} onClick={() => !isLoading && handleDownload(card.endpoint, format, key)}
+                  style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 12, padding: "16px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: isLoading ? "not-allowed" : "pointer", opacity: isLoading ? 0.7 : 1, transition: "background 0.15s" }}
+                  onMouseEnter={e => { if (!isLoading) e.currentTarget.style.background = T.accentLight }}
+                  onMouseLeave={e => e.currentTarget.style.background = T.card}>
+                  <div>
+                    <div style={{ fontWeight: 600, fontSize: 14, color: T.text }}>{card.label}</div>
+                    <div style={{ fontSize: 12, color: T.textSub, marginTop: 2 }}>
+                      {isLoading ? "Generating…" : `${card.sub} · ${format.toUpperCase()}`}
+                    </div>
+                  </div>
+                  <span style={{ fontSize: 20 }}>{isLoading ? "⏳" : format === "excel" ? "📊" : card.icon}</span>
                 </div>
-                <span style={{ fontSize: 20 }}>📄</span>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </>
       )}

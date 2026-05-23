@@ -4,6 +4,7 @@ const {
   list, create, getOne, update, updateOcr, confirmOcr, remove,
 } = require('../controllers/receiptController');
 const { protect, restrictTo } = require('../middleware/authMiddleware');
+const multerUpload = require('../middleware/upload');
 
 router.use(protect);
 
@@ -23,7 +24,7 @@ const bodyRules = [
 ];
 
 router.get('/',    list);
-router.post('/',   restrictTo('admin', 'accountant'), bodyRules, create);
+router.post('/',   restrictTo('admin', 'accountant'), multerUpload.single('file'), bodyRules, create);
 router.get('/:id', getOne);
 router.put('/:id', restrictTo('admin', 'accountant'), bodyRules, update);
 
