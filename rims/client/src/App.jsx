@@ -837,26 +837,57 @@ function Invoices({ T, isMobile }) {
   )
 }
 
+// ── OCR status badge ──────────────────────────────────────────────
+const OCR_META = {
+  pending:      { label: 'Pending',      color: '#95a5a6', bg: '#f5f5f5'  },
+  processing:   { label: 'Processing…',  color: '#3498db', bg: '#e6f2fb'  },
+  processed:    { label: 'Processed',    color: '#27ae60', bg: '#e8f8ef'  },
+  needs_review: { label: 'Needs Review', color: '#e67e22', bg: '#fef3e2'  },
+  confirmed:    { label: 'Confirmed',    color: '#27ae60', bg: '#e8f8ef'  },
+}
+function OcrBadge({ status, confidence }) {
+  const m = OCR_META[status] || OCR_META.pending
+  return (
+    <span style={{ background: m.bg, color: m.color, padding: "3px 8px", borderRadius: 10, fontSize: 11, fontWeight: 600, whiteSpace: "nowrap" }}>
+      {m.label}{confidence != null ? ` ${confidence}%` : ''}
+    </span>
+  )
+}
+
 // ── RECEIPTS ─────────────────────────────────────────────────────
 function Receipts({ T, isMobile }) {
   const [drag, setDrag]           = useState(false)
   const [rows, setRows]           = useState([])
   const [loading, setLoading]     = useState(true)
-  const [reviewCount, setReview]  = useState(0)
-  const fileRef                   = useState(null)
+  const [uploading, setUploading] = useState(false)
+  const [uploadErr, setUploadErr] = useState("")
+  const [reviewing, setReviewing] = useState(null)   // receipt being reviewed
+  const [reviewForm, setRF]       = useState({})
+
+  function fetchReceipts() {
+    return api.get('/receipts', { params: { limit: 50 } })
+      .then(r => setRows(r.data.receipts))
+      .catch(console.error)
+  }
 
   useEffect(() => {
-    api.get('/receipts', { params: { limit: 20 } })
-      .then(r => { setRows(r.data.receipts); })
-      .catch(console.error)
-      .finally(() => setLoading(false))
-    api.get('/receipts', { params: { needsReview: true, limit: 1 } })
-      .then(r => setReview(r.data.total))
-      .catch(() => {})
+    fetchReceipts().finally(() => setLoading(false))
   }, [])
+
+  // Poll while any receipt is still processing
+  useEffect(() => {
+    const hasProcessing = rows.some(r => r.ocr?.status === 'processing')
+    if (!hasProcessing) return
+    const t = setTimeout(fetchReceipts, 4000)
+    return () => clearTimeout(t)
+  }, [rows])
+
+  const reviewCount = rows.filter(r => r.ocr?.status === 'needs_review').length
 
   async function handleFileDrop(files) {
     if (!files?.length) return
+    setUploading(true)
+    setUploadErr("")
     const fd = new FormData()
     fd.append('file', files[0])
     fd.append('type', 'expense')
@@ -864,10 +895,39 @@ function Receipts({ T, isMobile }) {
     fd.append('amount', '0')
     try {
       await api.post('/receipts', fd)
-      const r = await api.get('/receipts', { params: { limit: 20 } })
-      setRows(r.data.receipts)
+      await fetchReceipts()
+    } catch (e) {
+      setUploadErr(e.response?.data?.message || 'Upload failed. Please try again.')
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  function openReview(doc) {
+    const ex = doc.ocr?.extractedData || {}
+    setRF({
+      vendor:    doc.vendorSnapshot?.name || ex.vendor || '',
+      amount:    doc.amount || ex.amount || '',
+      date:      doc.date ? new Date(doc.date).toISOString().split('T')[0] : '',
+      reference: doc.reference || ex.reference || '',
+    })
+    setReviewing(doc)
+  }
+
+  async function handleConfirm() {
+    try {
+      await api.patch(`/receipts/${reviewing._id}/confirm`, {
+        amount:     Number(reviewForm.amount),
+        date:       reviewForm.date,
+        reference:  reviewForm.reference,
+        vendorName: reviewForm.vendor,
+      })
+      setReviewing(null)
+      await fetchReceipts()
     } catch (e) { console.error(e) }
   }
+
+  const inputSty = { width: '100%', padding: '9px 11px', borderRadius: 8, border: `1px solid ${T.border}`, background: T.surface, color: T.text, fontSize: 13, outline: 'none', boxSizing: 'border-box' }
 
   return (
     <div>
@@ -878,50 +938,61 @@ function Receipts({ T, isMobile }) {
 
       <div onDragOver={e => { e.preventDefault(); setDrag(true) }} onDragLeave={() => setDrag(false)}
         onDrop={e => { e.preventDefault(); setDrag(false); handleFileDrop(e.dataTransfer.files) }}
-        style={{ border: `2px dashed ${drag ? T.accent : T.borderMid}`, borderRadius: 16, padding: isMobile ? "28px 16px" : "40px 24px", textAlign: "center", marginBottom: 24, background: drag ? T.accentLight : T.surface, transition: "all 0.2s", cursor: "pointer" }}>
-        <div style={{ fontSize: 36, marginBottom: 10 }}>📸</div>
-        <div style={{ fontWeight: 700, fontSize: isMobile ? 15 : 16, color: T.text, marginBottom: 6 }}>Drop files here or click to upload</div>
-        <div style={{ fontSize: 13, color: T.textSub, marginBottom: 16 }}>Supports PDF, JPG, PNG · OCR extraction in &lt;10 seconds</div>
-        <label style={{ padding: "9px 16px", background: T.accent, color: "#fff", border: "none", borderRadius: 8, fontWeight: 600, cursor: "pointer", fontSize: 13, display: "inline-block" }}>
+        style={{ border: `2px dashed ${drag ? T.accent : T.borderMid}`, borderRadius: 16, padding: isMobile ? "28px 16px" : "40px 24px", textAlign: "center", marginBottom: 16, background: drag ? T.accentLight : T.surface, transition: "all 0.2s", cursor: "pointer" }}>
+        <div style={{ fontSize: 36, marginBottom: 10 }}>{uploading ? "⏳" : "📸"}</div>
+        <div style={{ fontWeight: 700, fontSize: isMobile ? 15 : 16, color: T.text, marginBottom: 6 }}>
+          {uploading ? "Uploading & starting OCR…" : "Drop files here or click to upload"}
+        </div>
+        <div style={{ fontSize: 13, color: T.textSub, marginBottom: 16 }}>Supports PDF, JPG, PNG · OCR extraction runs automatically</div>
+        <label style={{ padding: "9px 16px", background: uploading ? T.accentMid : T.accent, color: "#fff", border: "none", borderRadius: 8, fontWeight: 600, cursor: uploading ? "not-allowed" : "pointer", fontSize: 13, display: "inline-block" }}>
           📂 Browse Files
-          <input type="file" accept=".pdf,.jpg,.jpeg,.png,.webp" style={{ display: "none" }} onChange={e => handleFileDrop(e.target.files)} />
+          <input type="file" accept=".pdf,.jpg,.jpeg,.png,.webp" style={{ display: "none" }} disabled={uploading}
+            onChange={e => handleFileDrop(e.target.files)} />
         </label>
       </div>
+
+      {uploadErr && (
+        <div style={{ background: T.dangerLight, border: `1px solid ${T.danger}44`, borderRadius: 10, padding: "10px 14px", marginBottom: 12, fontSize: 13, color: T.danger }}>{uploadErr}</div>
+      )}
 
       {reviewCount > 0 && (
         <div style={{ background: T.warnLight, border: `1px solid ${T.warn}44`, borderRadius: 12, padding: "12px 16px", marginBottom: 20, display: "flex", gap: 10, alignItems: isMobile ? "flex-start" : "center", flexDirection: isMobile ? "column" : "row" }}>
           <span style={{ fontSize: 18 }}>⚠️</span>
-          <div style={{ fontSize: 13, color: T.warn }}><strong>{reviewCount} document{reviewCount > 1 ? 's' : ''}</strong> with OCR confidence below 90% — please review before saving.</div>
-          <button onClick={() => {}} style={{ marginLeft: isMobile ? 0 : "auto", padding: "6px 14px", background: T.warn, color: "#fff", border: "none", borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: "pointer", flexShrink: 0 }}>Review</button>
+          <div style={{ fontSize: 13, color: T.warn }}>
+            <strong>{reviewCount} receipt{reviewCount > 1 ? 's' : ''}</strong> need review — OCR confidence was below 90%. Click the receipt to correct the extracted data.
+          </div>
         </div>
       )}
 
       <div style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 16, overflowX: "auto" }}>
-        <div style={{ padding: "16px 20px", borderBottom: `1px solid ${T.border}`, fontWeight: 700, fontSize: 15, color: T.text }}>Recent Receipts</div>
+        <div style={{ padding: "16px 20px", borderBottom: `1px solid ${T.border}`, fontWeight: 700, fontSize: 15, color: T.text }}>Receipts</div>
         {loading ? <Loader T={T} /> : rows.length === 0 ? <Empty message="No receipts yet — upload one above." T={T} /> : isMobile ? (
           <div>
             {rows.map(doc => (
-              <div key={doc._id} style={{ padding: "14px 16px", borderBottom: `1px solid ${T.border}` }}>
+              <div key={doc._id} onClick={() => doc.ocr?.status === 'needs_review' && openReview(doc)}
+                style={{ padding: "14px 16px", borderBottom: `1px solid ${T.border}`, cursor: doc.ocr?.status === 'needs_review' ? 'pointer' : 'default' }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
                   <div style={{ fontSize: 13, fontWeight: 600, color: T.text, flex: 1, marginRight: 8 }}>📄 {doc.file?.name || doc.receiptNumber}</div>
-                  <span style={{ background: T.accentLight, color: T.accent, padding: "2px 8px", borderRadius: 10, fontSize: 11, fontWeight: 600 }}>{cap(doc.type)}</span>
+                  <OcrBadge status={doc.ocr?.status} confidence={doc.ocr?.confidence} />
                 </div>
                 <div style={{ fontSize: 12, color: T.textSub }}>{doc.vendorSnapshot?.name || '—'} · {fmtDate(doc.date)} · {fmt(doc.amount)}</div>
               </div>
             ))}
           </div>
         ) : (
-          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 560 }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 600 }}>
             <thead>
               <tr style={{ background: T.surface }}>
-                {["File / Number", "Type", "Vendor", "Amount", "Date", "OCR"].map(h => (
+                {["File / Number", "Type", "Vendor", "Amount", "Date", "OCR Status"].map(h => (
                   <th key={h} style={{ padding: "10px 16px", textAlign: "left", fontSize: 11, fontWeight: 700, color: T.textSub, textTransform: "uppercase", letterSpacing: 0.5, whiteSpace: "nowrap" }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {rows.map(doc => (
-                <tr key={doc._id} style={{ borderTop: `1px solid ${T.border}` }}
+                <tr key={doc._id}
+                  onClick={() => doc.ocr?.status === 'needs_review' && openReview(doc)}
+                  style={{ borderTop: `1px solid ${T.border}`, cursor: doc.ocr?.status === 'needs_review' ? 'pointer' : 'default', transition: "background 0.15s" }}
                   onMouseEnter={e => e.currentTarget.style.background = T.accentLight}
                   onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
                   <td style={{ padding: "12px 16px", fontSize: 13, color: T.text }}>📄 {doc.file?.name || doc.receiptNumber}</td>
@@ -929,13 +1000,47 @@ function Receipts({ T, isMobile }) {
                   <td style={{ padding: "12px 16px", fontSize: 13, color: T.textMid }}>{doc.vendorSnapshot?.name || '—'}</td>
                   <td style={{ padding: "12px 16px", fontSize: 13, fontWeight: 600, color: T.text }}>{fmt(doc.amount)}</td>
                   <td style={{ padding: "12px 16px", fontSize: 13, color: T.textSub, whiteSpace: "nowrap" }}>{fmtDate(doc.date)}</td>
-                  <td style={{ padding: "12px 16px", fontSize: 12, color: doc.needsReview ? T.warn : T.success }}>{doc.ocr?.status || '—'}</td>
+                  <td style={{ padding: "12px 16px" }}><OcrBadge status={doc.ocr?.status} confidence={doc.ocr?.confidence} /></td>
                 </tr>
               ))}
             </tbody>
           </table>
         )}
       </div>
+
+      {/* Review modal */}
+      {reviewing && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+          <div style={{ background: T.card, borderRadius: 20, padding: isMobile ? "20px 16px" : 28, width: "100%", maxWidth: 480, border: `1px solid ${T.border}` }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+              <h3 style={{ fontSize: 17, fontWeight: 800, color: T.text, margin: 0 }}>Review Extracted Data</h3>
+              <button onClick={() => setReviewing(null)} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: T.textSub }}>✕</button>
+            </div>
+            <p style={{ fontSize: 13, color: T.textSub, marginTop: 0, marginBottom: 20 }}>
+              OCR confidence was <strong style={{ color: T.warn }}>{reviewing.ocr?.confidence}%</strong> for <em>{reviewing.file?.name}</em>. Verify the values below before confirming.
+            </p>
+
+            {reviewing.ocr?.extractedData && (
+              <div style={{ background: T.accentLight, borderRadius: 8, padding: "10px 14px", marginBottom: 16, fontSize: 12, color: T.textMid }}>
+                <strong>Raw OCR extracted:</strong>{" "}
+                vendor: "{reviewing.ocr.extractedData.vendor || '—'}" · amount: {reviewing.ocr.extractedData.amount ?? '—'} · date: "{reviewing.ocr.extractedData.date || '—'}"
+              </div>
+            )}
+
+            {[['Vendor / Business Name', 'vendor', 'text'], ['Amount (₦)', 'amount', 'number'], ['Date', 'date', 'date'], ['Reference / Receipt No.', 'reference', 'text']].map(([lbl, key, type]) => (
+              <div key={key} style={{ marginBottom: 14 }}>
+                <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: T.textMid, marginBottom: 4 }}>{lbl}</label>
+                <input type={type} value={reviewForm[key]} onChange={e => setRF(f => ({ ...f, [key]: e.target.value }))} style={inputSty} />
+              </div>
+            ))}
+
+            <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
+              <button onClick={() => setReviewing(null)} style={{ flex: 1, padding: "11px", background: T.surface, color: T.textMid, border: `1px solid ${T.border}`, borderRadius: 8, fontWeight: 600, cursor: "pointer" }}>Cancel</button>
+              <button onClick={handleConfirm} style={{ flex: 2, padding: "11px", background: T.accent, color: "#fff", border: "none", borderRadius: 8, fontWeight: 700, cursor: "pointer" }}>Confirm & Save</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

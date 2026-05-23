@@ -1,5 +1,6 @@
 const { validationResult } = require('express-validator');
 const Receipt = require('../models/Receipt');
+const { processReceipt } = require('../services/ocrService');
 
 // GET /api/receipts
 const list = async (req, res, next) => {
@@ -60,6 +61,12 @@ const create = async (req, res, next) => {
     }
 
     const receipt = await Receipt.create(data);
+
+    // Fire OCR in background — don't block the HTTP response
+    if (data.file?.path) {
+      processReceipt(receipt._id, data.file).catch(() => {});
+    }
+
     res.status(201).json({ receipt });
   } catch (err) {
     next(err);
