@@ -64,7 +64,9 @@ const create = async (req, res, next) => {
 
     // Fire OCR in background — don't block the HTTP response
     if (data.file?.path) {
-      processReceipt(receipt._id, data.file).catch(() => {});
+      processReceipt(receipt._id, data.file).catch(err =>
+        console.error(`[OCR] Background task failed for receipt ${receipt._id}:`, err.message)
+      );
     }
 
     res.status(201).json({ receipt });

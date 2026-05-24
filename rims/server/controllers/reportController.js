@@ -420,8 +420,7 @@ const exportAging = async (req, res, next) => {
     const buckets = { '0–30d': [], '31–60d': [], '61–90d': [], '90+d': [] };
     outstanding.forEach(inv => {
       const days = Math.floor((now - inv.dueDate) / 86_400_000);
-      if      (days <= 0)  buckets['0–30d'].push(inv);
-      else if (days <= 30) buckets['0–30d'].push(inv);
+      if      (days <= 30) buckets['0–30d'].push(inv);
       else if (days <= 60) buckets['31–60d'].push(inv);
       else if (days <= 90) buckets['61–90d'].push(inv);
       else                 buckets['90+d'].push(inv);

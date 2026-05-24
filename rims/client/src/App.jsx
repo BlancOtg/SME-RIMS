@@ -2,6 +2,9 @@ import { useState, useEffect } from 'react'
 import { AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import api from './api'
 
+// Strip /api suffix so we can construct static-file URLs like /uploads/...
+const SERVER_ORIGIN = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/api\/?$/, '')
+
 // ── Breakpoint hook ──────────────────────────────────────────────
 function useWindowSize() {
   const [width, setWidth] = useState(window.innerWidth)
@@ -53,6 +56,45 @@ const AGING_META = [
   { range: '61–90d', fill: '#e74c3c' },
   { range: '90+d',   fill: '#8e44ad' },
 ]
+
+// ── RBAC ─────────────────────────────────────────────────────────
+const NAV_ACCESS = {
+  dashboard: ['admin', 'accountant', 'sysadmin'],
+  invoices:  ['admin', 'accountant', 'vendor', 'client', 'sysadmin'],
+  receipts:  ['admin', 'accountant', 'sysadmin'],
+  vendors:   ['admin', 'accountant', 'sysadmin'],
+  documents: ['admin', 'accountant', 'vendor', 'client', 'sysadmin'],
+  reports:   ['admin', 'accountant', 'sysadmin'],
+  settings:  ['admin', 'sysadmin'],
+}
+
+const ROLE_HOME = {
+  admin: 'dashboard', accountant: 'dashboard', sysadmin: 'dashboard',
+  vendor: 'invoices', client: 'invoices',
+}
+
+const ROLE_META = {
+  admin:      { label: 'Admin',      color: '#e74c3c', bg: '#fdecea' },
+  accountant: { label: 'Accountant', color: '#3498db', bg: '#e6f2fb' },
+  vendor:     { label: 'Vendor',     color: '#e67e22', bg: '#fef3e2' },
+  client:     { label: 'Client',     color: '#27ae60', bg: '#e8f8ef' },
+  sysadmin:   { label: 'Sysadmin',   color: '#8e44ad', bg: '#f5eef8' },
+}
+
+function can(user, action) {
+  const role = user?.role
+  const PERMS = {
+    'create:invoice':  ['admin', 'accountant', 'sysadmin'],
+    'send:invoice':    ['admin', 'accountant', 'sysadmin'],
+    'create:receipt':  ['admin', 'accountant', 'sysadmin'],
+    'upload:document': ['admin', 'accountant', 'sysadmin'],
+    'manage:vendors':  ['admin', 'accountant', 'sysadmin'],
+    'view:reports':    ['admin', 'accountant', 'sysadmin'],
+    'access:settings': ['admin', 'sysadmin'],
+    'delete:any':      ['admin', 'sysadmin'],
+  }
+  return !!(PERMS[action]?.includes(role))
+}
 
 function Loader({ T }) {
   return (
@@ -112,7 +154,7 @@ function SignupField({ label, value, onChange, type = "text", placeholder, error
 }
 
 // ── LOGIN ────────────────────────────────────────────────────────
-function Login({ onLogin, onSignupInstead, T }) {
+function Login({ onLogin, onSignupInstead, onForgot, T }) {
   const [email, setEmail]         = useState("")
   const [pass, setPass]           = useState("")
   const [loading, setLoading]     = useState(false)
@@ -171,7 +213,7 @@ function Login({ onLogin, onSignupInstead, T }) {
             style={{ width: "100%", padding: "12px 14px", borderRadius: 10, border: `1.5px solid ${T.border}`, background: T.surface, color: T.text, fontSize: 15, marginBottom: 8, outline: "none", boxSizing: "border-box" }} />
 
           <div style={{ textAlign: "right", marginBottom: 16 }}>
-            <span style={{ fontSize: 13, color: T.accent, cursor: "pointer" }}>Forgot password?</span>
+            <span onClick={onForgot} style={{ fontSize: 13, color: T.accent, cursor: "pointer" }}>Forgot password?</span>
           </div>
 
           {serverErr && (
@@ -195,6 +237,169 @@ function Login({ onLogin, onSignupInstead, T }) {
         @keyframes fadeUp { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
         @keyframes shake  { 0%,100%{transform:translateX(0)} 20%,60%{transform:translateX(-8px)} 40%,80%{transform:translateX(8px)} }
       `}</style>
+    </div>
+  )
+}
+
+// ── FORGOT PASSWORD ──────────────────────────────────────────────
+function ForgotPassword({ onBack, T }) {
+  const [email, setEmail]     = useState("")
+  const [loading, setLoading] = useState(false)
+  const [sent, setSent]       = useState(false)
+  const [error, setError]     = useState("")
+
+  async function handleSubmit(e) {
+    e.preventDefault()
+    if (!email) { setError("Please enter your email address."); return }
+    setLoading(true); setError("")
+    try {
+      await api.post('/auth/forgot-password', { email })
+      setSent(true)
+    } catch (err) {
+      setError(err.response?.data?.message || "Something went wrong. Please try again.")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div style={{ minHeight: "100vh", background: T.bg, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'DM Sans','Segoe UI',sans-serif", padding: 16 }}>
+      <div style={{ background: T.card, borderRadius: 24, padding: "clamp(24px,5vw,48px) clamp(20px,5vw,40px)", width: "100%", maxWidth: 420, boxShadow: "0 8px 40px rgba(0,0,0,0.08)", border: `1px solid ${T.border}`, animation: "fadeUp 0.4s ease" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 32 }}>
+          <div style={{ width: 44, height: 44, background: T.accent, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>💰</div>
+          <div>
+            <div style={{ fontWeight: 800, fontSize: 20, color: T.text, letterSpacing: -0.5 }}>RIMS</div>
+            <div style={{ fontSize: 11, color: T.textSub, letterSpacing: 0.5 }}>RECEIPT & INVOICE MANAGEMENT</div>
+          </div>
+        </div>
+
+        {sent ? (
+          <div>
+            <div style={{ fontSize: 40, textAlign: "center", marginBottom: 16 }}>📬</div>
+            <h2 style={{ fontSize: 20, fontWeight: 700, color: T.text, margin: "0 0 10px", textAlign: "center" }}>Check your inbox</h2>
+            <p style={{ fontSize: 14, color: T.textSub, lineHeight: 1.6, textAlign: "center", margin: "0 0 24px" }}>
+              If <strong>{email}</strong> is registered, you'll receive a reset link within a few minutes.
+            </p>
+            <button onClick={onBack}
+              style={{ width: "100%", padding: 13, background: T.accent, color: "#fff", border: "none", borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: "pointer" }}>
+              Back to Sign In
+            </button>
+          </div>
+        ) : (
+          <>
+            <h1 style={{ fontSize: 22, fontWeight: 700, color: T.text, margin: "0 0 6px" }}>Forgot your password?</h1>
+            <p style={{ fontSize: 14, color: T.textSub, margin: "0 0 28px" }}>Enter your email and we'll send you a reset link.</p>
+
+            <form onSubmit={handleSubmit}>
+              <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: T.textMid, marginBottom: 6 }}>Email address</label>
+              <input value={email} onChange={e => { setEmail(e.target.value); setError("") }} type="email" placeholder="owner@yourbusiness.ng"
+                style={{ width: "100%", padding: "12px 14px", borderRadius: 10, border: `1.5px solid ${error ? "#e74c3c" : T.border}`, background: T.surface, color: T.text, fontSize: 15, marginBottom: error ? 8 : 20, outline: "none", boxSizing: "border-box" }} />
+              {error && <div style={{ fontSize: 12, color: "#e74c3c", marginBottom: 16 }}>{error}</div>}
+
+              <button type="submit" disabled={loading}
+                style={{ width: "100%", padding: 13, background: loading ? T.accentMid : T.accent, color: "#fff", border: "none", borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: loading ? "not-allowed" : "pointer" }}>
+                {loading ? "Sending…" : "Send Reset Link"}
+              </button>
+            </form>
+
+            <div style={{ marginTop: 20, textAlign: "center", fontSize: 14, color: T.textSub }}>
+              <span onClick={onBack} style={{ color: T.accent, fontWeight: 600, cursor: "pointer" }}>← Back to Sign In</span>
+            </div>
+          </>
+        )}
+      </div>
+      <style>{`@keyframes fadeUp { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:none; } }`}</style>
+    </div>
+  )
+}
+
+// ── RESET PASSWORD ────────────────────────────────────────────────
+function ResetPassword({ token, onSuccess, onBack, T }) {
+  const [password, setPassword]   = useState("")
+  const [confirm, setConfirm]     = useState("")
+  const [loading, setLoading]     = useState(false)
+  const [error, setError]         = useState("")
+
+  function strength(p) {
+    if (!p) return 0
+    let s = 0
+    if (p.length >= 8)           s++
+    if (/[A-Z]/.test(p))         s++
+    if (/[0-9]/.test(p))         s++
+    if (/[^A-Za-z0-9]/.test(p)) s++
+    return s
+  }
+
+  async function handleSubmit(e) {
+    e.preventDefault()
+    if (password.length < 8) { setError("Password must be at least 8 characters."); return }
+    if (password !== confirm)  { setError("Passwords do not match."); return }
+    setLoading(true); setError("")
+    try {
+      const { data } = await api.post(`/auth/reset-password/${token}`, { password })
+      localStorage.setItem('rims_token', data.token)
+      // Clear token from URL without reload
+      window.history.replaceState({}, document.title, window.location.pathname)
+      onSuccess(data)
+    } catch (err) {
+      setError(err.response?.data?.message || "Reset failed. The link may have expired.")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const str        = strength(password)
+  const strColors  = ["", "#e74c3c", "#e67e22", "#f39c12", "#27ae60"]
+  const strLabels  = ["", "Weak", "Fair", "Good", "Strong"]
+
+  return (
+    <div style={{ minHeight: "100vh", background: T.bg, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'DM Sans','Segoe UI',sans-serif", padding: 16 }}>
+      <div style={{ background: T.card, borderRadius: 24, padding: "clamp(24px,5vw,48px) clamp(20px,5vw,40px)", width: "100%", maxWidth: 420, boxShadow: "0 8px 40px rgba(0,0,0,0.08)", border: `1px solid ${T.border}`, animation: "fadeUp 0.4s ease" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 32 }}>
+          <div style={{ width: 44, height: 44, background: T.accent, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>💰</div>
+          <div>
+            <div style={{ fontWeight: 800, fontSize: 20, color: T.text, letterSpacing: -0.5 }}>RIMS</div>
+            <div style={{ fontSize: 11, color: T.textSub, letterSpacing: 0.5 }}>RECEIPT & INVOICE MANAGEMENT</div>
+          </div>
+        </div>
+
+        <h1 style={{ fontSize: 22, fontWeight: 700, color: T.text, margin: "0 0 6px" }}>Set a new password</h1>
+        <p style={{ fontSize: 14, color: T.textSub, margin: "0 0 28px" }}>Choose a strong password for your account.</p>
+
+        <form onSubmit={handleSubmit}>
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: T.textMid, marginBottom: 6 }}>New Password</label>
+            <input value={password} onChange={e => { setPassword(e.target.value); setError("") }} type="password" placeholder="Min. 8 characters"
+              style={{ width: "100%", padding: "12px 14px", borderRadius: 10, border: `1.5px solid ${T.border}`, background: T.surface, color: T.text, fontSize: 15, outline: "none", boxSizing: "border-box" }} />
+            {password && (
+              <div style={{ marginTop: 8 }}>
+                <div style={{ display: "flex", gap: 3, marginBottom: 4 }}>
+                  {[1,2,3,4].map(i => <div key={i} style={{ height: 4, flex: 1, borderRadius: 2, background: str >= i ? strColors[str] : T.border, transition: "background 0.2s" }} />)}
+                </div>
+                <div style={{ fontSize: 11, color: strColors[str], fontWeight: 600 }}>{strLabels[str]}</div>
+              </div>
+            )}
+          </div>
+
+          <div style={{ marginBottom: error ? 8 : 20 }}>
+            <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: T.textMid, marginBottom: 6 }}>Confirm Password</label>
+            <input value={confirm} onChange={e => { setConfirm(e.target.value); setError("") }} type="password" placeholder="••••••••"
+              style={{ width: "100%", padding: "12px 14px", borderRadius: 10, border: `1.5px solid ${error ? "#e74c3c" : T.border}`, background: T.surface, color: T.text, fontSize: 15, outline: "none", boxSizing: "border-box" }} />
+          </div>
+
+          {error && <div style={{ background: T.dangerLight, border: `1px solid ${T.danger}44`, borderRadius: 8, padding: "10px 14px", marginBottom: 16, fontSize: 13, color: T.danger }}>{error}</div>}
+
+          <button type="submit" disabled={loading}
+            style={{ width: "100%", padding: 13, background: loading ? T.accentMid : T.accent, color: "#fff", border: "none", borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: loading ? "not-allowed" : "pointer" }}>
+            {loading ? "Saving…" : "Reset Password"}
+          </button>
+        </form>
+
+        <div style={{ marginTop: 20, textAlign: "center", fontSize: 14, color: T.textSub }}>
+          <span onClick={onBack} style={{ color: T.accent, fontWeight: 600, cursor: "pointer" }}>← Back to Sign In</span>
+        </div>
+      </div>
+      <style>{`@keyframes fadeUp { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:none; } }`}</style>
     </div>
   )
 }
@@ -377,13 +582,15 @@ const navItems = [
   { id: "settings",  icon: "⚙️", label: "Settings"          },
 ]
 
-function Sidebar({ active, setActive, dark, setDark, collapsed, setCollapsed, isMobile, sidebarOpen, setSidebarOpen, onLogout, T }) {
-  const visible = isMobile ? sidebarOpen : true
-  const width   = isMobile ? 260 : collapsed ? 68 : 228
+function Sidebar({ active, setActive, dark, setDark, collapsed, setCollapsed, isMobile, sidebarOpen, setSidebarOpen, onLogout, user, T }) {
+  const visible   = isMobile ? sidebarOpen : true
+  const width     = isMobile ? 260 : collapsed ? 68 : 228
+  const role      = user?.role || 'accountant'
+  const roleMeta  = ROLE_META[role] || ROLE_META.accountant
+  const visibleNav = navItems.filter(item => NAV_ACCESS[item.id]?.includes(role))
 
   return (
     <>
-      {/* Mobile backdrop */}
       {isMobile && sidebarOpen && (
         <div onClick={() => setSidebarOpen(false)}
           style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 99 }} />
@@ -413,8 +620,17 @@ function Sidebar({ active, setActive, dark, setDark, collapsed, setCollapsed, is
           )}
         </div>
 
+        {/* Role chip */}
+        {(!collapsed || isMobile) && (
+          <div style={{ padding: "0 20px 14px" }}>
+            <span style={{ display: "inline-block", background: roleMeta.bg, color: roleMeta.color, fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 20, letterSpacing: 0.3 }}>
+              {roleMeta.label}
+            </span>
+          </div>
+        )}
+
         <nav style={{ flex: 1, padding: "8px 0" }}>
-          {navItems.map(item => (
+          {visibleNav.map(item => (
             <div key={item.id} onClick={() => { setActive(item.id); if (isMobile) setSidebarOpen(false) }}
               title={collapsed && !isMobile ? item.label : ""}
               style={{ display: "flex", alignItems: "center", gap: 12, padding: collapsed && !isMobile ? "12px 0" : "12px 20px", justifyContent: collapsed && !isMobile ? "center" : "flex-start", cursor: "pointer", background: active === item.id ? "rgba(77,166,90,0.18)" : "transparent", borderLeft: active === item.id ? `3px solid ${T.sidebarActive}` : "3px solid transparent", transition: "all 0.15s" }}>
@@ -596,7 +812,7 @@ function Dashboard({ T, isMobile, isTablet, onNavigate }) {
 const EMPTY_ITEM = () => ({ description: '', quantity: 1, unitPrice: 0 })
 const EMPTY_FORM = () => ({ clientName: '', dueDate: '', taxRate: 0, discount: 0, notes: '', items: [EMPTY_ITEM()] })
 
-function Invoices({ T, isMobile }) {
+function Invoices({ T, isMobile, user }) {
   const [rows, setRows]           = useState([])
   const [total, setTotal]         = useState(0)
   const [loading, setLoading]     = useState(true)
@@ -680,10 +896,12 @@ function Invoices({ T, isMobile }) {
           <h2 style={{ fontSize: "clamp(18px, 4vw, 22px)", fontWeight: 800, color: T.text, margin: 0 }}>Invoices</h2>
           <p style={{ color: T.textSub, fontSize: 14, marginTop: 4 }}>{total} invoice{total !== 1 ? 's' : ''} total</p>
         </div>
-        <button onClick={() => { setShowNew(true); setForm(EMPTY_FORM()); setFormErr('') }}
-          style={{ background: T.accent, color: "#fff", border: "none", borderRadius: 10, padding: "10px 20px", fontWeight: 700, fontSize: 14, cursor: "pointer", alignSelf: isMobile ? "flex-start" : "auto" }}>
-          + New Invoice
-        </button>
+        {can(user, 'create:invoice') && (
+          <button onClick={() => { setShowNew(true); setForm(EMPTY_FORM()); setFormErr('') }}
+            style={{ background: T.accent, color: "#fff", border: "none", borderRadius: 10, padding: "10px 20px", fontWeight: 700, fontSize: 14, cursor: "pointer", alignSelf: isMobile ? "flex-start" : "auto" }}>
+            + New Invoice
+          </button>
+        )}
       </div>
 
       <div style={{ display: "flex", gap: 10, marginBottom: 20, flexDirection: "column" }}>
@@ -715,7 +933,7 @@ function Invoices({ T, isMobile }) {
                   </div>
                 </div>
                 <div style={{ display: "flex", gap: 6 }}>
-                  {inv.status === 'draft' && <button onClick={() => handleSend(inv._id)} style={{ padding: "6px 12px", background: T.accentLight, color: T.accent, border: "none", borderRadius: 6, fontSize: 13, cursor: "pointer", fontWeight: 600 }}>Send</button>}
+                  {inv.status === 'draft' && can(user, 'send:invoice') && <button onClick={() => handleSend(inv._id)} style={{ padding: "6px 12px", background: T.accentLight, color: T.accent, border: "none", borderRadius: 6, fontSize: 13, cursor: "pointer", fontWeight: 600 }}>Send</button>}
                 </div>
               </div>
             </div>
@@ -747,7 +965,7 @@ function Invoices({ T, isMobile }) {
                   </td>
                   <td style={{ padding: "14px 16px" }}><Badge status={cap(inv.status)} /></td>
                   <td style={{ padding: "14px 16px" }}>
-                    {inv.status === 'draft' && (
+                    {inv.status === 'draft' && can(user, 'send:invoice') && (
                       <button onClick={() => handleSend(inv._id)} style={{ padding: "5px 10px", background: T.accentLight, color: T.accent, border: "none", borderRadius: 6, fontSize: 12, cursor: "pointer", fontWeight: 600 }}>Send</button>
                     )}
                   </td>
@@ -1160,7 +1378,7 @@ function VendorsClients({ T, isMobile }) {
 }
 
 // ── DOCUMENTS ────────────────────────────────────────────────────
-function Documents({ T, isMobile }) {
+function Documents({ T, isMobile, user }) {
   const [search, setSearch]   = useState("")
   const [debSearch, setDeb]   = useState("")
   const [rows, setRows]       = useState([])
@@ -1226,7 +1444,7 @@ function Documents({ T, isMobile }) {
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
               <span style={{ background: doc.type === "receipt" ? T.accentLight : T.infoLight, color: doc.type === "receipt" ? T.accent : T.info, padding: "2px 8px", borderRadius: 10, fontSize: 11, fontWeight: 600 }}>{cap(doc.type)}</span>
-              <a href={`http://localhost:5000${doc.fileUrl}`} target="_blank" rel="noreferrer"
+              <a href={`${SERVER_ORIGIN}${doc.fileUrl}`} target="_blank" rel="noreferrer"
                 style={{ padding: "5px 10px", background: T.surface, color: T.textMid, border: `1px solid ${T.border}`, borderRadius: 6, fontSize: 12, cursor: "pointer", textDecoration: "none" }}>↓</a>
             </div>
           </div>
@@ -1416,7 +1634,12 @@ const pages = {
 export default function App() {
   const [dark, setDark]               = useState(false)
   const [loggedIn, setLoggedIn]       = useState(false)
-  const [authView, setAuthView]       = useState("login")
+  const [authView, setAuthView]       = useState(() => {
+    // Auto-detect reset token in URL on first load
+    const p = new URLSearchParams(window.location.search)
+    return p.get('token') ? 'reset' : 'login'
+  })
+  const [resetToken]                  = useState(() => new URLSearchParams(window.location.search).get('token') || "")
   const [user, setUser]               = useState(null)
   const [active, setActive]           = useState("dashboard")
   const [collapsed, setCollapsed]     = useState(false)
@@ -1430,18 +1653,32 @@ export default function App() {
   const sideW = isMobile ? 0 : collapsed ? 68 : 228
   const Page  = pages[active] || Dashboard
 
-  // Restore session from localStorage on mount
+  // Restore session on mount
   useEffect(() => {
     const token = localStorage.getItem('rims_token')
     if (!token) return
     api.get('/auth/me')
-      .then(({ data }) => { setUser(data.user); setLoggedIn(true) })
+      .then(({ data }) => {
+        setUser(data.user)
+        setActive(ROLE_HOME[data.user.role] || 'dashboard')
+        setLoggedIn(true)
+      })
       .catch(() => localStorage.removeItem('rims_token'))
   }, [])
+
+  // Enforce nav access — redirect if active page isn't allowed for this role
+  useEffect(() => {
+    if (!user) return
+    const allowed = NAV_ACCESS[active]
+    if (allowed && !allowed.includes(user.role)) {
+      setActive(ROLE_HOME[user.role] || 'invoices')
+    }
+  }, [active, user])
 
   function handleAuth({ token, user: u }) {
     localStorage.setItem('rims_token', token)
     setUser(u)
+    setActive(ROLE_HOME[u.role] || 'dashboard')
     setLoggedIn(true)
   }
 
@@ -1449,14 +1686,21 @@ export default function App() {
     localStorage.removeItem('rims_token')
     setUser(null)
     setLoggedIn(false)
+    setActive("dashboard")
     setAuthView("login")
   }
 
   if (!loggedIn) {
     if (authView === "signup")
       return <Signup onSignup={handleAuth} onLoginInstead={() => setAuthView("login")} T={T} />
-    return <Login onLogin={handleAuth} onSignupInstead={() => setAuthView("signup")} T={T} />
+    if (authView === "forgot")
+      return <ForgotPassword onBack={() => setAuthView("login")} T={T} />
+    if (authView === "reset")
+      return <ResetPassword token={resetToken} onSuccess={handleAuth} onBack={() => setAuthView("login")} T={T} />
+    return <Login onLogin={handleAuth} onSignupInstead={() => setAuthView("signup")} onForgot={() => setAuthView("forgot")} T={T} />
   }
+
+  const roleMeta = ROLE_META[user?.role] || ROLE_META.accountant
 
   return (
     <div style={{ background: T.bg, minHeight: "100vh", fontFamily: "'DM Sans','Segoe UI',sans-serif", color: T.text }}>
@@ -1467,6 +1711,7 @@ export default function App() {
         isMobile={isMobile}
         sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen}
         onLogout={handleLogout}
+        user={user}
         T={T}
       />
 
@@ -1487,6 +1732,11 @@ export default function App() {
               <div style={{ position: "absolute", top: -2, right: -2, width: 8, height: 8, background: "#e74c3c", borderRadius: "50%" }} />
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              {!isMobile && (
+                <span style={{ fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 12, background: roleMeta.bg, color: roleMeta.color }}>
+                  {roleMeta.label}
+                </span>
+              )}
               <div style={{ width: 32, height: 32, background: T.accent, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 700, fontSize: 13, flexShrink: 0 }}>
                 {user ? `${user.firstName[0]}${user.lastName[0]}`.toUpperCase() : "?"}
               </div>
@@ -1501,7 +1751,7 @@ export default function App() {
 
         {/* Page content */}
         <div style={{ padding: isMobile ? "16px" : "28px" }}>
-          <Page T={T} isMobile={isMobile} isTablet={isTablet} onNavigate={setActive} />
+          <Page T={T} isMobile={isMobile} isTablet={isTablet} onNavigate={setActive} user={user} />
         </div>
       </div>
 

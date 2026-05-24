@@ -1,6 +1,8 @@
-const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
+const jwt    = require('jsonwebtoken');
 const { validationResult } = require('express-validator');
 const User = require('../models/User');
+const { sendPasswordReset } = require('../services/emailService');
 
 const signToken = (id) =>
   jwt.sign({ id }, process.env.JWT_SECRET, {
@@ -70,4 +72,75 @@ const getMe = async (req, res, next) => {
   }
 };
 
-module.exports = { register, login, getMe };
+// POST /api/auth/forgot-password
+const forgotPassword = async (req, res, next) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) return res.status(422).json({ errors: errors.array() });
+
+    const { email } = req.body;
+    const user = await User.findOne({ email: email.toLowerCase().trim() })
+      .select('+resetPasswordToken +resetPasswordExpires');
+
+    // Always respond the same way — prevents email enumeration
+    const OK = { message: 'If that email is registered you will receive a reset link shortly.' };
+
+    if (!user || !user.isActive) return res.json(OK);
+
+    const rawToken  = crypto.randomBytes(32).toString('hex');
+    const hashToken = crypto.createHash('sha256').update(rawToken).digest('hex');
+
+    user.resetPasswordToken   = hashToken;
+    user.resetPasswordExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+    await user.save();
+
+    const resetUrl = `${process.env.CLIENT_URL || 'http://localhost:5173'}?token=${rawToken}`;
+
+    try {
+      await sendPasswordReset(user.email, resetUrl, user.firstName);
+    } catch (emailErr) {
+      console.error('[email] reset send failed:', emailErr.message);
+      user.resetPasswordToken   = undefined;
+      user.resetPasswordExpires = undefined;
+      await user.save();
+      return next(Object.assign(new Error('Failed to send reset email. Please try again.'), { status: 502 }));
+    }
+
+    res.json(OK);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// POST /api/auth/reset-password/:token
+const resetPassword = async (req, res, next) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) return res.status(422).json({ errors: errors.array() });
+
+    const hashToken = crypto.createHash('sha256').update(req.params.token).digest('hex');
+
+    const user = await User.findOne({
+      resetPasswordToken:   hashToken,
+      resetPasswordExpires: { $gt: Date.now() },
+    }).select('+resetPasswordToken +resetPasswordExpires +password');
+
+    if (!user) {
+      return res.status(400).json({ message: 'Reset link is invalid or has expired.' });
+    }
+
+    user.password             = req.body.password;
+    user.resetPasswordToken   = undefined;
+    user.resetPasswordExpires = undefined;
+    user.failedLoginAttempts  = 0;
+    user.lockedUntil          = null;
+    await user.save();
+
+    const token = signToken(user._id);
+    res.json({ token, user, message: 'Password updated successfully.' });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = { register, login, getMe, forgotPassword, resetPassword };
