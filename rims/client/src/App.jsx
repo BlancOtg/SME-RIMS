@@ -157,6 +157,7 @@ function SignupField({ label, value, onChange, type = "text", placeholder, error
 function Login({ onLogin, onSignupInstead, onForgot, T }) {
   const [email, setEmail]         = useState("")
   const [pass, setPass]           = useState("")
+  const [showPass, setShowPass]   = useState(false)
   const [loading, setLoading]     = useState(false)
   const [shake, setShake]         = useState(false)
   const [serverErr, setServerErr] = useState("")
@@ -209,8 +210,14 @@ function Login({ onLogin, onSignupInstead, onForgot, T }) {
             style={{ width: "100%", padding: "12px 14px", borderRadius: 10, border: `1.5px solid ${T.border}`, background: T.surface, color: T.text, fontSize: 15, marginBottom: 16, outline: "none", boxSizing: "border-box" }} />
 
           <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: T.textMid, marginBottom: 6 }}>Password</label>
-          <input value={pass} onChange={e => setPass(e.target.value)} type="password" placeholder="••••••••"
-            style={{ width: "100%", padding: "12px 14px", borderRadius: 10, border: `1.5px solid ${T.border}`, background: T.surface, color: T.text, fontSize: 15, marginBottom: 8, outline: "none", boxSizing: "border-box" }} />
+          <div style={{ position: "relative", marginBottom: 8 }}>
+            <input value={pass} onChange={e => setPass(e.target.value)} type={showPass ? "text" : "password"} placeholder="••••••••"
+              style={{ width: "100%", padding: "12px 44px 12px 14px", borderRadius: 10, border: `1.5px solid ${T.border}`, background: T.surface, color: T.text, fontSize: 15, outline: "none", boxSizing: "border-box" }} />
+            <button type="button" onClick={() => setShowPass(v => !v)}
+              style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", fontSize: 16, color: T.textSub, lineHeight: 1, padding: 2 }}>
+              {showPass ? "🙈" : "👁"}
+            </button>
+          </div>
 
           <div style={{ textAlign: "right", marginBottom: 16 }}>
             <span onClick={onForgot} style={{ fontSize: 13, color: T.accent, cursor: "pointer" }}>Forgot password?</span>
