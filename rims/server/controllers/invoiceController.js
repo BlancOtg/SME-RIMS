@@ -138,4 +138,29 @@ const remove = async (req, res, next) => {
   }
 };
 
-module.exports = { list, create, getOne, update, updateStatus, recordPayment, remove };
+// PATCH /api/invoices/:id/sign
+const sign = async (req, res, next) => {
+  try {
+    const { signatureData } = req.body;
+    if (!signatureData) return res.status(422).json({ message: 'Signature data is required' });
+
+    const invoice = await Invoice.findById(req.params.id);
+    if (!invoice) return res.status(404).json({ message: 'Invoice not found' });
+    if (invoice.status === 'draft')
+      return res.status(409).json({ message: 'Cannot sign a draft invoice' });
+
+    invoice.signature = {
+      data:       signatureData,
+      signedBy:   req.user.id,
+      signerName: `${req.user.firstName} ${req.user.lastName}`,
+      signedAt:   new Date(),
+    };
+
+    await invoice.save();
+    res.json({ invoice });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = { list, create, getOne, update, updateStatus, recordPayment, remove, sign };

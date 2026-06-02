@@ -1,6 +1,5 @@
 const Invoice  = require('../models/Invoice');
 const Receipt  = require('../models/Receipt');
-const Vendor   = require('../models/Vendor');
 const Client   = require('../models/Client');
 const Document = require('../models/Document');
 
@@ -30,10 +29,10 @@ const summary = async (req, res, next) => {
         { $group: { _id: null, total: { $sum: '$balance' } } },
       ]),
 
-      // Total payables (sum of vendor balances)
-      Vendor.aggregate([
-        { $match: { isActive: true } },
-        { $group: { _id: null, total: { $sum: '$balance' } } },
+      // Total payables (sum of all expense receipts)
+      Receipt.aggregate([
+        { $match: { type: 'expense' } },
+        { $group: { _id: null, total: { $sum: '$amount' } } },
       ]),
 
       // Overdue invoices — count + total

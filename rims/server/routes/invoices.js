@@ -1,7 +1,7 @@
 const router = require('express').Router();
 const { body } = require('express-validator');
 const {
-  list, create, getOne, update, updateStatus, recordPayment, remove,
+  list, create, getOne, update, updateStatus, recordPayment, remove, sign,
 } = require('../controllers/invoiceController');
 const { protect, restrictTo } = require('../middleware/authMiddleware');
 
@@ -38,6 +38,12 @@ router.patch('/:id/payment',
   restrictTo('admin', 'accountant'),
   body('amount').isFloat({ min: 0.01 }).withMessage('Payment amount must be a positive number'),
   recordPayment
+);
+
+router.patch('/:id/sign',
+  restrictTo('admin', 'accountant'),
+  body('signatureData').notEmpty().withMessage('Signature data is required'),
+  sign
 );
 
 router.delete('/:id', restrictTo('admin', 'accountant'), remove);

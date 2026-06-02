@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import api from './api'
 
@@ -196,13 +196,13 @@ function Login({ onLogin, onSignupInstead, onForgot, T }) {
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 32 }}>
           <div style={{ width: 44, height: 44, background: T.accent, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0 }}>💰</div>
           <div>
-            <div style={{ fontWeight: 800, fontSize: 20, color: T.text, letterSpacing: -0.5 }}>RIMS</div>
-            <div style={{ fontSize: 11, color: T.textSub, letterSpacing: 0.5 }}>RECEIPT & INVOICE MANAGEMENT</div>
+            <div style={{ fontWeight: 800, fontSize: 20, color: T.text, letterSpacing: -0.5 }}>LedgerLink</div>
+            <div style={{ fontSize: 11, color: T.textSub, letterSpacing: 0.5 }}>SMART FINANCE PLATFORM</div>
           </div>
         </div>
 
         <h1 style={{ fontSize: 24, fontWeight: 700, color: T.text, margin: "0 0 6px" }}>Welcome back</h1>
-        <p style={{ fontSize: 14, color: T.textSub, marginBottom: 28 }}>Sign in to your RIMS account</p>
+        <p style={{ fontSize: 14, color: T.textSub, marginBottom: 28 }}>Sign in to your LedgerLink account</p>
 
         <form onSubmit={handleSubmit} style={{ animation: shake ? "shake 0.4s ease" : "none" }}>
           <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: T.textMid, marginBottom: 6 }}>Email address</label>
@@ -275,8 +275,8 @@ function ForgotPassword({ onBack, T }) {
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 32 }}>
           <div style={{ width: 44, height: 44, background: T.accent, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>💰</div>
           <div>
-            <div style={{ fontWeight: 800, fontSize: 20, color: T.text, letterSpacing: -0.5 }}>RIMS</div>
-            <div style={{ fontSize: 11, color: T.textSub, letterSpacing: 0.5 }}>RECEIPT & INVOICE MANAGEMENT</div>
+            <div style={{ fontWeight: 800, fontSize: 20, color: T.text, letterSpacing: -0.5 }}>LedgerLink</div>
+            <div style={{ fontSize: 11, color: T.textSub, letterSpacing: 0.5 }}>SMART FINANCE PLATFORM</div>
           </div>
         </div>
 
@@ -365,8 +365,8 @@ function ResetPassword({ token, onSuccess, onBack, T }) {
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 32 }}>
           <div style={{ width: 44, height: 44, background: T.accent, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>💰</div>
           <div>
-            <div style={{ fontWeight: 800, fontSize: 20, color: T.text, letterSpacing: -0.5 }}>RIMS</div>
-            <div style={{ fontSize: 11, color: T.textSub, letterSpacing: 0.5 }}>RECEIPT & INVOICE MANAGEMENT</div>
+            <div style={{ fontWeight: 800, fontSize: 20, color: T.text, letterSpacing: -0.5 }}>LedgerLink</div>
+            <div style={{ fontSize: 11, color: T.textSub, letterSpacing: 0.5 }}>SMART FINANCE PLATFORM</div>
           </div>
         </div>
 
@@ -498,13 +498,13 @@ function Signup({ onSignup, onLoginInstead, T }) {
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 28 }}>
           <div style={{ width: 44, height: 44, background: T.accent, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0 }}>💰</div>
           <div>
-            <div style={{ fontWeight: 800, fontSize: 20, color: T.text, letterSpacing: -0.5 }}>RIMS</div>
-            <div style={{ fontSize: 11, color: T.textSub, letterSpacing: 0.5 }}>RECEIPT & INVOICE MANAGEMENT</div>
+            <div style={{ fontWeight: 800, fontSize: 20, color: T.text, letterSpacing: -0.5 }}>LedgerLink</div>
+            <div style={{ fontSize: 11, color: T.textSub, letterSpacing: 0.5 }}>SMART FINANCE PLATFORM</div>
           </div>
         </div>
 
         <h1 style={{ fontSize: 22, fontWeight: 700, color: T.text, margin: "0 0 4px" }}>Create your account</h1>
-        <p style={{ fontSize: 14, color: T.textSub, marginBottom: 24 }}>Get started with RIMS today</p>
+        <p style={{ fontSize: 14, color: T.textSub, marginBottom: 24 }}>Get started with LedgerLink today</p>
 
         <form onSubmit={handleSubmit} style={{ animation: shake ? "shake 0.4s ease" : "none" }}>
           <div style={{ marginBottom: 16 }}>
@@ -618,8 +618,8 @@ function Sidebar({ active, setActive, dark, setDark, collapsed, setCollapsed, is
           <div style={{ width: 36, height: 36, background: T.accent, borderRadius: 10, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, marginLeft: collapsed && !isMobile ? 16 : 0 }}>💰</div>
           {(!collapsed || isMobile) && (
             <div>
-              <div style={{ fontWeight: 800, fontSize: 16, color: "#fff", letterSpacing: -0.3 }}>RIMS</div>
-              <div style={{ fontSize: 9, color: T.sidebarText, opacity: 0.6, letterSpacing: 0.8 }}>MANAGEMENT SYSTEM</div>
+              <div style={{ fontWeight: 800, fontSize: 16, color: "#fff", letterSpacing: -0.3 }}>LedgerLink</div>
+              <div style={{ fontSize: 9, color: T.sidebarText, opacity: 0.6, letterSpacing: 0.8 }}>SMART FINANCE</div>
             </div>
           )}
           {isMobile && (
@@ -815,6 +815,83 @@ function Dashboard({ T, isMobile, isTablet, onNavigate }) {
   )
 }
 
+// ── SIGNATURE PAD ─────────────────────────────────────────────────
+function SignaturePad({ onSave, onCancel, T }) {
+  const canvasRef = useRef(null)
+  const drawing   = useRef(false)
+  const [isEmpty, setIsEmpty] = useState(true)
+
+  function getXY(e) {
+    const rect = canvasRef.current.getBoundingClientRect()
+    const src  = e.touches ? e.touches[0] : e
+    return { x: src.clientX - rect.left, y: src.clientY - rect.top }
+  }
+
+  function startDraw(e) {
+    e.preventDefault()
+    const ctx = canvasRef.current.getContext('2d')
+    const { x, y } = getXY(e)
+    ctx.beginPath(); ctx.moveTo(x, y)
+    drawing.current = true
+    setIsEmpty(false)
+  }
+
+  function draw(e) {
+    if (!drawing.current) return
+    e.preventDefault()
+    const ctx = canvasRef.current.getContext('2d')
+    const { x, y } = getXY(e)
+    ctx.lineTo(x, y)
+    ctx.strokeStyle = '#1a2e1a'; ctx.lineWidth = 2.5
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round'
+    ctx.stroke()
+  }
+
+  function endDraw() { drawing.current = false }
+
+  function clear() {
+    const c = canvasRef.current
+    c.getContext('2d').clearRect(0, 0, c.width, c.height)
+    setIsEmpty(true)
+  }
+
+  function save() {
+    onSave(canvasRef.current.toDataURL('image/png'))
+  }
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+      <div style={{ background: T.card, borderRadius: 20, padding: 28, width: "100%", maxWidth: 520, border: `1px solid ${T.border}` }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+          <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: T.text }}>Draw your signature</h3>
+          <button onClick={onCancel} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: T.textSub }}>✕</button>
+        </div>
+        <p style={{ fontSize: 13, color: T.textSub, marginTop: 0, marginBottom: 14 }}>Use your mouse or touch to sign in the box below.</p>
+
+        <canvas ref={canvasRef} width={460} height={160}
+          onMouseDown={startDraw} onMouseMove={draw} onMouseUp={endDraw} onMouseLeave={endDraw}
+          onTouchStart={startDraw} onTouchMove={draw} onTouchEnd={endDraw}
+          style={{ width: "100%", height: 160, border: `2px dashed ${isEmpty ? T.borderMid : T.accent}`, borderRadius: 10, background: T.surface, cursor: "crosshair", touchAction: "none", display: "block", transition: "border-color 0.2s" }} />
+
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 14 }}>
+          <button onClick={clear} style={{ padding: "8px 16px", background: T.surface, color: T.textMid, border: `1px solid ${T.border}`, borderRadius: 8, cursor: "pointer", fontWeight: 600, fontSize: 13 }}>
+            Clear
+          </button>
+          <div style={{ display: "flex", gap: 10 }}>
+            <button onClick={onCancel} style={{ padding: "9px 18px", background: T.surface, color: T.textMid, border: `1px solid ${T.border}`, borderRadius: 8, cursor: "pointer", fontWeight: 600, fontSize: 13 }}>
+              Cancel
+            </button>
+            <button onClick={save} disabled={isEmpty}
+              style={{ padding: "9px 20px", background: isEmpty ? T.accentMid : T.accent, color: "#fff", border: "none", borderRadius: 8, cursor: isEmpty ? "not-allowed" : "pointer", fontWeight: 700, fontSize: 13, opacity: isEmpty ? 0.6 : 1 }}>
+              Apply Signature
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── INVOICES ─────────────────────────────────────────────────────
 const EMPTY_ITEM = () => ({ description: '', quantity: 1, unitPrice: 0 })
 const EMPTY_FORM = () => ({ clientName: '', dueDate: '', taxRate: 0, discount: 0, notes: '', items: [EMPTY_ITEM()] })
@@ -830,6 +907,11 @@ function Invoices({ T, isMobile, user }) {
   const [form, setForm]           = useState(EMPTY_FORM())
   const [saving, setSaving]       = useState(false)
   const [formErr, setFormErr]     = useState("")
+  const [sigTarget, setSigTarget] = useState(null)
+  const [payTarget, setPayTarget] = useState(null)
+  const [payAmount, setPayAmount] = useState("")
+  const [payErr, setPayErr]       = useState("")
+  const [paying, setPaying]       = useState(false)
   const statuses = ["All", "Draft", "Sent", "Overdue", "Paid", "Partial"]
 
   // Debounce search
@@ -894,6 +976,33 @@ function Invoices({ T, isMobile, user }) {
     setRows(prev => prev.map(r => r._id === id ? { ...r, status: 'sent' } : r))
   }
 
+  async function handleRecordPayment() {
+    const amount = Number(payAmount)
+    if (!amount || amount <= 0) { setPayErr('Enter a valid amount'); return }
+    if (amount > payTarget.balance) { setPayErr(`Amount exceeds outstanding balance of ${fmt(payTarget.balance)}`); return }
+    setPaying(true); setPayErr('')
+    try {
+      const { data } = await api.patch(`/invoices/${payTarget._id}/payment`, { amount })
+      setRows(prev => prev.map(r => r._id === payTarget._id ? data.invoice : r))
+      setPayTarget(null); setPayAmount('')
+    } catch (err) {
+      setPayErr(err.response?.data?.message || 'Payment failed')
+    } finally {
+      setPaying(false)
+    }
+  }
+
+  async function handleSign(invoice, signatureData) {
+    try {
+      const { data } = await api.patch(`/invoices/${invoice._id}/sign`, { signatureData })
+      setRows(prev => prev.map(r => r._id === invoice._id ? data.invoice : r))
+    } catch (err) {
+      console.error('Sign failed:', err.response?.data?.message || err.message)
+    } finally {
+      setSigTarget(null)
+    }
+  }
+
   const inputSty = { width: '100%', padding: '9px 11px', borderRadius: 8, border: `1px solid ${T.border}`, background: T.surface, color: T.text, fontSize: 13, outline: 'none', boxSizing: 'border-box' }
 
   return (
@@ -939,8 +1048,20 @@ function Invoices({ T, isMobile, user }) {
                     {inv.daysOverdue > 0 && <span style={{ color: "#e74c3c", marginLeft: 4 }}>({inv.daysOverdue}d overdue)</span>}
                   </div>
                 </div>
-                <div style={{ display: "flex", gap: 6 }}>
-                  {inv.status === 'draft' && can(user, 'send:invoice') && <button onClick={() => handleSend(inv._id)} style={{ padding: "6px 12px", background: T.accentLight, color: T.accent, border: "none", borderRadius: 6, fontSize: 13, cursor: "pointer", fontWeight: 600 }}>Send</button>}
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                  {inv.status === 'draft' && can(user, 'send:invoice') && (
+                    <button onClick={() => handleSend(inv._id)} style={{ padding: "6px 12px", background: T.accentLight, color: T.accent, border: "none", borderRadius: 6, fontSize: 13, cursor: "pointer", fontWeight: 600 }}>Send</button>
+                  )}
+                  {['sent','viewed','partial','overdue'].includes(inv.status) && can(user, 'send:invoice') && (
+                    <button onClick={() => { setPayTarget(inv); setPayAmount(String(inv.balance)); setPayErr('') }}
+                      style={{ padding: "6px 12px", background: T.successLight, color: T.success, border: "none", borderRadius: 6, fontSize: 13, cursor: "pointer", fontWeight: 600 }}>💳 Pay</button>
+                  )}
+                  {inv.status !== 'draft' && !inv.signature?.signedAt && can(user, 'send:invoice') && (
+                    <button onClick={() => setSigTarget(inv)} style={{ padding: "6px 12px", background: T.infoLight, color: T.info, border: "none", borderRadius: 6, fontSize: 13, cursor: "pointer", fontWeight: 600 }}>✍ Sign</button>
+                  )}
+                  {inv.signature?.signedAt && (
+                    <span style={{ background: T.successLight, color: T.success, padding: "4px 10px", borderRadius: 10, fontSize: 12, fontWeight: 700 }}>✔ Signed</span>
+                  )}
                 </div>
               </div>
             </div>
@@ -972,9 +1093,21 @@ function Invoices({ T, isMobile, user }) {
                   </td>
                   <td style={{ padding: "14px 16px" }}><Badge status={cap(inv.status)} /></td>
                   <td style={{ padding: "14px 16px" }}>
-                    {inv.status === 'draft' && can(user, 'send:invoice') && (
-                      <button onClick={() => handleSend(inv._id)} style={{ padding: "5px 10px", background: T.accentLight, color: T.accent, border: "none", borderRadius: 6, fontSize: 12, cursor: "pointer", fontWeight: 600 }}>Send</button>
-                    )}
+                    <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+                      {inv.status === 'draft' && can(user, 'send:invoice') && (
+                        <button onClick={() => handleSend(inv._id)} style={{ padding: "5px 10px", background: T.accentLight, color: T.accent, border: "none", borderRadius: 6, fontSize: 12, cursor: "pointer", fontWeight: 600 }}>Send</button>
+                      )}
+                      {['sent','viewed','partial','overdue'].includes(inv.status) && can(user, 'send:invoice') && (
+                        <button onClick={() => { setPayTarget(inv); setPayAmount(String(inv.balance)); setPayErr('') }}
+                          style={{ padding: "5px 10px", background: T.successLight, color: T.success, border: "none", borderRadius: 6, fontSize: 12, cursor: "pointer", fontWeight: 600 }}>💳 Pay</button>
+                      )}
+                      {inv.status !== 'draft' && !inv.signature?.signedAt && can(user, 'send:invoice') && (
+                        <button onClick={() => setSigTarget(inv)} style={{ padding: "5px 10px", background: T.infoLight, color: T.info, border: "none", borderRadius: 6, fontSize: 12, cursor: "pointer", fontWeight: 600 }}>✍ Sign</button>
+                      )}
+                      {inv.signature?.signedAt && (
+                        <span style={{ background: T.successLight, color: T.success, padding: "3px 8px", borderRadius: 10, fontSize: 11, fontWeight: 700, whiteSpace: "nowrap" }}>✔ Signed</span>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -982,6 +1115,66 @@ function Invoices({ T, isMobile, user }) {
           </table>
           {rows.length === 0 && <Empty message="No invoices match your filter." T={T} />}
         </div>
+      )}
+
+      {payTarget && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+          <div style={{ background: T.card, borderRadius: 20, padding: 28, width: "100%", maxWidth: 420, border: `1px solid ${T.border}` }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+              <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: T.text }}>Record Payment</h3>
+              <button onClick={() => setPayTarget(null)} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: T.textSub }}>✕</button>
+            </div>
+            <p style={{ fontSize: 13, color: T.textSub, marginTop: 0, marginBottom: 20 }}>
+              {payTarget.invoiceNumber} · {payTarget.clientSnapshot?.name}
+            </p>
+
+            <div style={{ background: T.accentLight, borderRadius: 8, padding: "10px 14px", marginBottom: 18, fontSize: 13 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", color: T.textMid, marginBottom: 4 }}>
+                <span>Invoice total</span><span style={{ fontWeight: 700 }}>{fmt(payTarget.total)}</span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", color: T.textMid, marginBottom: 4 }}>
+                <span>Already paid</span><span style={{ fontWeight: 700 }}>{fmt(payTarget.amountPaid)}</span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", color: T.text, borderTop: `1px solid ${T.borderMid}`, paddingTop: 6, marginTop: 4 }}>
+                <span style={{ fontWeight: 700 }}>Outstanding balance</span>
+                <span style={{ fontWeight: 800, color: T.warn }}>{fmt(payTarget.balance)}</span>
+              </div>
+            </div>
+
+            <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: T.textMid, marginBottom: 6 }}>Payment Amount (₦)</label>
+            <input
+              type="number" min={0.01} step="0.01"
+              value={payAmount}
+              onChange={e => { setPayAmount(e.target.value); setPayErr('') }}
+              style={{ width: "100%", padding: "11px 13px", borderRadius: 8, border: `1.5px solid ${payErr ? T.danger : T.border}`, background: T.surface, color: T.text, fontSize: 15, outline: "none", boxSizing: "border-box", marginBottom: 6 }}
+            />
+            <div style={{ display: "flex", gap: 8, marginBottom: payErr ? 10 : 18 }}>
+              {[25, 50, 75, 100].map(pct => (
+                <button key={pct} onClick={() => { setPayAmount((payTarget.balance * pct / 100).toFixed(2)); setPayErr('') }}
+                  style={{ flex: 1, padding: "5px 0", background: T.surface, color: T.textMid, border: `1px solid ${T.border}`, borderRadius: 6, fontSize: 12, cursor: "pointer", fontWeight: 600 }}>
+                  {pct}%
+                </button>
+              ))}
+            </div>
+            {payErr && <div style={{ background: T.dangerLight, border: `1px solid ${T.danger}44`, borderRadius: 8, padding: "8px 12px", marginBottom: 14, fontSize: 13, color: T.danger }}>{payErr}</div>}
+
+            <div style={{ display: "flex", gap: 10 }}>
+              <button onClick={() => setPayTarget(null)} style={{ flex: 1, padding: "11px", background: T.surface, color: T.textMid, border: `1px solid ${T.border}`, borderRadius: 8, fontWeight: 600, cursor: "pointer" }}>Cancel</button>
+              <button onClick={handleRecordPayment} disabled={paying}
+                style={{ flex: 2, padding: "11px", background: paying ? T.accentMid : T.accent, color: "#fff", border: "none", borderRadius: 8, fontWeight: 700, cursor: paying ? "not-allowed" : "pointer" }}>
+                {paying ? "Saving…" : "Confirm Payment"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {sigTarget && (
+        <SignaturePad
+          onSave={data => handleSign(sigTarget, data)}
+          onCancel={() => setSigTarget(null)}
+          T={T}
+        />
       )}
 
       {showNew && (
@@ -1601,7 +1794,7 @@ function Settings({ T }) {
     <div>
       <div style={{ marginBottom: 24 }}>
         <h2 style={{ fontSize: "clamp(18px, 4vw, 22px)", fontWeight: 800, color: T.text, margin: 0 }}>Settings</h2>
-        <p style={{ color: T.textSub, fontSize: 14, marginTop: 4 }}>Configure your RIMS workspace</p>
+        <p style={{ color: T.textSub, fontSize: 14, marginTop: 4 }}>Configure your LedgerLink workspace</p>
       </div>
       {[
         { title: "Business Profile", items: [["Business Name", "input", "Sunrise Enterprises Ltd"], ["Email", "input", "admin@sunrise.ng"]] },

@@ -27,15 +27,15 @@ async function sendPasswordReset(to, resetUrl, firstName) {
   }
 
   await transporter.sendMail({
-    from:    process.env.EMAIL_FROM || '"RIMS" <noreply@rims.app>',
+    from:    process.env.EMAIL_FROM || '"LedgerLink" <noreply@ledgerlink.app>',
     to,
     subject: 'Reset your RIMS password',
     html: `
       <div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;padding:32px;background:#f7f9f4;border-radius:16px;">
         <div style="text-align:center;margin-bottom:24px;">
           <div style="font-size:36px;">💰</div>
-          <h1 style="color:#1a2e1a;margin:8px 0 4px;font-size:22px;font-weight:800;">RIMS</h1>
-          <p style="color:#7a9b72;font-size:11px;margin:0;letter-spacing:1px;text-transform:uppercase;">Receipt & Invoice Management</p>
+          <h1 style="color:#1a2e1a;margin:8px 0 4px;font-size:22px;font-weight:800;">LedgerLink</h1>
+          <p style="color:#7a9b72;font-size:11px;margin:0;letter-spacing:1px;text-transform:uppercase;">Smart Finance Platform</p>
         </div>
         <div style="background:#fff;border-radius:12px;padding:28px;border:1px solid #d6e8d0;">
           <h2 style="color:#1a2e1a;margin:0 0 12px;font-size:18px;">Password Reset Request</h2>
@@ -56,7 +56,7 @@ async function sendPasswordReset(to, resetUrl, firstName) {
           </p>
         </div>
         <p style="color:#7a9b72;font-size:11px;text-align:center;margin:16px 0 0;">
-          © ${new Date().getFullYear()} RIMS · Secure Financial Management
+          © ${new Date().getFullYear()} LedgerLink · Secure Financial Management
         </p>
       </div>
     `,

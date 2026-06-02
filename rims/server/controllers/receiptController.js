@@ -1,5 +1,6 @@
 const { validationResult } = require('express-validator');
-const Receipt = require('../models/Receipt');
+const Receipt  = require('../models/Receipt');
+const Document = require('../models/Document');
 const { processReceipt } = require('../services/ocrService');
 
 // GET /api/receipts
@@ -62,8 +63,21 @@ const create = async (req, res, next) => {
 
     const receipt = await Receipt.create(data);
 
-    // Fire OCR in background — don't block the HTTP response
+    // Mirror uploaded file into the Document store for the Documents page
     if (data.file?.path) {
+      Document.create({
+        fileName:       data.file.name,
+        filePath:       data.file.path,
+        fileUrl:        data.file.url,
+        fileSize:       data.file.size,
+        mimeType:       data.file.mimeType,
+        type:           'receipt',
+        relatedReceipt: receipt._id,
+        entityName:     receipt.vendorSnapshot?.name || '',
+        uploadedBy:     req.user.id,
+      }).catch(err => console.error('[Document] Failed to mirror receipt file:', err.message));
+
+      // Fire OCR in background — don't block the HTTP response
       processReceipt(receipt._id, data.file).catch(err =>
         console.error(`[OCR] Background task failed for receipt ${receipt._id}:`, err.message)
       );

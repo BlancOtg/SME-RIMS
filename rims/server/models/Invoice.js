@@ -58,6 +58,14 @@ const invoiceSchema = new mongoose.Schema(
 
     // File attachments (stored as paths or object-storage keys)
     attachments: [{ type: String }],
+
+    // E-signature
+    signature: {
+      data:       { type: String, default: null },   // base64 PNG from canvas
+      signedBy:   { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+      signerName: { type: String, default: '' },
+      signedAt:   { type: Date, default: null },
+    },
   },
   { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );
